@@ -21,7 +21,6 @@ async function freshDb() {
     req.onblocked = () => resolve();
   });
   jest.resetModules();
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('../db') as typeof import('../db');
 }
 
