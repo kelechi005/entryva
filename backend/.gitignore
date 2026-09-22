@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Env files — never commit real secrets. .env.example files ARE meant
+# to be committed (no real values in them) and are explicitly un-ignored
+# below.
+.env
+.env.*
+!.env.example
+
+# Build output
+backend/dist/
+frontend/.next/
+frontend/out/
+*.tsbuildinfo
+
+# Prisma
+backend/prisma/migrations/dev/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test / coverage
+coverage/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Local backups produced by db-backup/backup.sh if run outside Docker
+db-backup/*.sql
+db-backup/*.sql.gz

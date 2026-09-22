@@ -1,0 +1,424 @@
+// Estate Visitor Verification Platform — Prisma schema
+// Derived from CLAUDE.md section 7 (Database Model).
+// Every estate-owned table carries an explicit estateId for tenant isolation.
+// Enforce estateId filtering in the service layer — never rely on the
+// frontend, and never assume a record ID alone is sufficient authorization.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  SUPER_ADMIN
+  ESTATE_ADMIN
+  RESIDENT
+  SECURITY_OFFICER
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING
+  // Set when an admin removes a resident/security officer. Deliberately
+  // not a real delete: their historical invitations, verification
+  // events, and entry/exit records must survive (see Invitation.resident
+  // onDelete: Cascade — actually deleting the User/ResidentProfile row
+  // would wipe that history). REMOVED blocks login exactly like
+  // SUSPENDED (AuthService.login / JwtStrategy.validate both check
+  // status !== 'ACTIVE') and removed accounts are excluded from the
+  // default admin list views.
+  REMOVED
+}
+
+enum EstateStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum ApartmentStatus {
+  OCCUPIED
+  VACANT
+}
+
+enum InvitationStatus {
+  PENDING
+  ACTIVE
+  USED
+  EXPIRED
+  REVOKED
+  CANCELLED
+}
+
+enum ResidentInviteStatus {
+  PENDING
+  USED
+  EXPIRED
+  REVOKED
+}
+
+enum EntryPolicy {
+  ONE_TIME
+  MULTI_ENTRY
+}
+
+enum EntryExitType {
+  ENTRY
+  EXIT
+}
+
+enum VerificationOutcome {
+  VALID
+  EXPIRED
+  NOT_YET_VALID
+  REVOKED
+  ALREADY_USED
+  WRONG_ESTATE
+  NOT_FOUND
+  RATE_LIMITED
+}
+
+// ---------------------------------------------------------------------------
+// Platform / identity
+// ---------------------------------------------------------------------------
+
+model User {
+  id               String     @id @default(cuid())
+  email            String?    @unique
+  phone            String?    @unique
+  passwordHash     String?
+  externalAuthId   String?    @unique
+  role             UserRole
+  status           UserStatus @default(ACTIVE)
+  // Hash of the current refresh token, so a stolen refresh token can be
+  // invalidated (rotate-on-use) without maintaining a separate session table.
+  refreshTokenHash String?
+  // Only set (and only meaningful) when role === ESTATE_ADMIN. SUPER_ADMIN
+  // is intentionally estate-less — it manages the platform, not one estate.
+  adminEstateId    String?
+  adminEstate      Estate?    @relation(fields: [adminEstateId], references: [id], onDelete: SetNull)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  lastLoginAt      DateTime?
+
+  residentProfile        ResidentProfile?
+  securityOfficerProfile SecurityOfficerProfile?
+  auditLogs               AuditLog[]
+  residentInvitesSent     ResidentInvite[]
+
+  @@index([role])
+}
+
+model Estate {
+  id        String       @id @default(cuid())
+  name      String
+  address   String?
+  logoUrl   String?
+  timezone  String       @default("UTC")
+  status    EstateStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  buildings        Building[]
+  apartments       Apartment[]
+  residents        ResidentProfile[]
+  securityOfficers SecurityOfficerProfile[]
+  visitors         Visitor[]
+  invitations      Invitation[]
+  residentInvites  ResidentInvite[]
+  auditLogs        AuditLog[]
+  admins           User[]
+}
+
+// ---------------------------------------------------------------------------
+// Estate structure
+// ---------------------------------------------------------------------------
+
+model Building {
+  id        String   @id @default(cuid())
+  estateId  String
+  estate    Estate   @relation(fields: [estateId], references: [id], onDelete: Cascade)
+  name      String
+  code      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  apartments Apartment[]
+
+  @@index([estateId])
+  // Exact-match, case-sensitive backstop against a create/create race
+  // slipping past the app-level check in AdministrationService
+  // (assertBuildingNameIsFree, which is case-insensitive and trimmed —
+  // the real duplicate rule lives there, this index only guarantees the
+  // DB itself never ends up with two byte-identical names).
+  @@unique([estateId, name])
+}
+
+model Apartment {
+  id         String          @id @default(cuid())
+  estateId   String
+  estate     Estate          @relation(fields: [estateId], references: [id], onDelete: Cascade)
+  buildingId String
+  building   Building        @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  // Treated as opaque data, not a numeric value: "B-204", "Flat 4", etc.
+  flatNumber String
+  status     ApartmentStatus @default(VACANT)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  residents   ResidentProfile[]
+  invitations Invitation[]
+  residentInvites ResidentInvite[]
+
+  @@index([estateId])
+  @@index([buildingId])
+  @@unique([buildingId, flatNumber])
+}
+
+model ResidentProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  estateId    String
+  estate      Estate   @relation(fields: [estateId], references: [id], onDelete: Cascade)
+  apartmentId String
+  apartment   Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  displayName String
+  phone       String?
+  status      UserStatus @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  invitations Invitation[]
+
+  @@index([estateId])
+  @@index([apartmentId])
+}
+
+// Admin-initiated resident onboarding invite: admin picks the apartment
+// + types the resident's email, we email a one-time link, the resident
+// opens it and sets their own name + password. Never a real account
+// until the link is used — see ResidentInvitesService for why the
+// apartment binding has to be decided by the admin up front (identity
+// can't be trusted from a self-filled form alone).
+model ResidentInvite {
+  id          String                @id @default(cuid())
+  estateId    String
+  estate      Estate                @relation(fields: [estateId], references: [id], onDelete: Cascade)
+  apartmentId String
+  apartment   Apartment             @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  email       String
+  // Never store the raw token — same "shown once" rule as Invitation's
+  // secureTokenHash. Unique so a hash collision can never silently
+  // resolve to the wrong invite.
+  tokenHash   String                @unique
+  status      ResidentInviteStatus  @default(PENDING)
+  expiresAt   DateTime
+  invitedById String
+  invitedBy   User                  @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+  usedAt      DateTime?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@index([estateId])
+  @@index([apartmentId])
+  @@index([tokenHash])
+}
+
+model SecurityOfficerProfile {
+  id           String     @id @default(cuid())
+  userId       String     @unique
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  estateId     String
+  estate       Estate     @relation(fields: [estateId], references: [id], onDelete: Cascade)
+  fullName     String
+  employeeCode String
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  verificationEvents VerificationEvent[]
+  entryExitEvents    EntryExitEvent[]
+
+  @@index([estateId])
+  @@unique([estateId, employeeCode])
+}
+
+// ---------------------------------------------------------------------------
+// Visitors & invitations (core domain)
+// ---------------------------------------------------------------------------
+
+model Visitor {
+  id        String   @id @default(cuid())
+  estateId  String
+  estate    Estate   @relation(fields: [estateId], references: [id], onDelete: Cascade)
+  fullName  String
+  phone     String?
+  photoUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invitations Invitation[]
+
+  @@index([estateId])
+}
+
+model Invitation {
+  id              String           @id @default(cuid())
+  estateId        String
+  estate          Estate           @relation(fields: [estateId], references: [id], onDelete: Cascade)
+  residentId      String
+  resident        ResidentProfile  @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  apartmentId     String
+  apartment       Apartment        @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  visitorId       String
+  visitor         Visitor          @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+
+  // Never store raw secrets. Only hashes are persisted; the plaintext
+  // token/code is shown to the resident/visitor once at creation time.
+  secureTokenHash String           @unique
+  displayCodeHash String
+
+  validFrom  DateTime
+  validUntil DateTime
+  status     InvitationStatus @default(PENDING)
+  entryPolicy EntryPolicy     @default(ONE_TIME)
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  revokedAt  DateTime?
+  usedAt     DateTime?
+
+  events             InvitationEvent[]
+  verificationEvents VerificationEvent[]
+  visits             Visit[]
+
+  @@index([estateId])
+  @@index([residentId])
+  @@index([apartmentId])
+  @@index([status])
+}
+
+// Append-only history of state transitions for an invitation
+// (created, shared, viewed, revoked, expired, used, etc).
+model InvitationEvent {
+  id           String   @id @default(cuid())
+  invitationId String
+  invitation   Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  type         String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([invitationId])
+}
+
+// A verification attempt at the gate — may succeed or fail, always logged.
+model VerificationEvent {
+  id                String              @id @default(cuid())
+  invitationId      String?
+  invitation        Invitation?         @relation(fields: [invitationId], references: [id], onDelete: SetNull)
+  securityOfficerId String
+  securityOfficer   SecurityOfficerProfile @relation(fields: [securityOfficerId], references: [id], onDelete: Cascade)
+  outcome           VerificationOutcome
+  method            String // "QR" | "MANUAL_CODE"
+  offline           Boolean             @default(false)
+  createdAt         DateTime            @default(now())
+
+  @@index([invitationId])
+  @@index([securityOfficerId])
+}
+
+// One realized visit tied to an invitation (start on entry, end on exit).
+model Visit {
+  id           String    @id @default(cuid())
+  invitationId String
+  invitation   Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  enteredAt    DateTime?
+  exitedAt     DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  entryExitEvents EntryExitEvent[]
+
+  @@index([invitationId])
+}
+
+model EntryExitEvent {
+  id                String        @id @default(cuid())
+  visitId           String
+  visit             Visit         @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  securityOfficerId String
+  securityOfficer   SecurityOfficerProfile @relation(fields: [securityOfficerId], references: [id], onDelete: Cascade)
+  type              EntryExitType
+  createdAt         DateTime      @default(now())
+
+  @@index([visitId])
+}
+
+// ---------------------------------------------------------------------------
+// Supporting domain
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  payload   Json?
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  estateId  String?
+  estate    Estate?  @relation(fields: [estateId], references: [id], onDelete: SetNull)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String?
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([estateId])
+  @@index([userId])
+}
+
+enum OfflineSyncStatus {
+  SYNCED
+  FAILED
+}
+
+// CLAUDE.md §26: append-only record of what an offline gate device
+// eventually reported. clientEventId is the idempotency key — a retried
+// sync of the same event must resolve to the same row, never a duplicate
+// EntryExitEvent/Visit. occurredAt (device clock, while offline) is kept
+// distinct from syncedAt (server clock, when the batch was processed) so
+// "ordered where necessary" can be reconstructed after the fact.
+model OfflineSyncEvent {
+  id                String            @id @default(cuid())
+  estateId          String
+  securityOfficerId String
+  deviceId          String
+  eventType         String // "ENTRY" | "DENY"
+  payload           Json
+  status            OfflineSyncStatus @default(SYNCED)
+  errorMessage      String?
+  clientEventId     String            @unique // idempotency key from the offline client
+  occurredAt        DateTime
+  syncedAt          DateTime          @default(now())
+
+  @@index([deviceId])
+  @@index([estateId])
+  @@index([securityOfficerId])
+}

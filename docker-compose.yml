@@ -1,0 +1,92 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: estate_visitor
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env
+    ports:
+      - "4000:4000"
+    healthcheck:
+      # GET /health/ready (see backend/src/modules/health) — checks the
+      # process is up AND can actually reach the database, not just that
+      # the port is open.
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # CLAUDE.md §11 lists automated DB backups as in-scope V1 infra. Plain
+  # pg_dump on a loop (see db-backup/README.md) — reuses the same
+  # postgres:16-alpine image already pulled above, no new dependency.
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: estate_visitor
+      BACKUP_INTERVAL_SECONDS: 86400
+      BACKUP_RETENTION_DAYS: 14
+    volumes:
+      - ./db-backup/backup.sh:/backup.sh:ro
+      - postgres_backups:/backups
+    entrypoint: ["/bin/sh", "/backup.sh"]
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    env_file:
+      - ./frontend/.env
+    ports:
+      - "3000:3000"
+
+  # TURN relay for officer-to-officer calls (see backend/src/modules/realtime).
+  # Needed for two officers both on restrictive/cellular NAT, where a
+  # direct WebRTC connection can't be established — STUN alone (used for
+  # everyone else, free, no server) only helps peers discover their own
+  # address, it can't relay traffic when a direct path isn't possible.
+  # coturn implements the same "TURN REST API" time-limited-credential
+  # scheme the backend's GET /realtime/ice-servers endpoint issues
+  # credentials for (static-auth-secret below must match TURN_SECRET in
+  # backend/.env) — see coturn/README.md for the full setup, including
+  # the DNS record and open ports this actually needs in production.
+  coturn:
+    image: coturn/coturn:4.6
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+    command: ["-c", "/etc/coturn/turnserver.conf"]
+
+volumes:
+  postgres_data:
+  postgres_backups:

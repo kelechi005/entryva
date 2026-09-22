@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html, body {
+  background: #050505;
+}
+
+/* Reusable glass surface — floating card with blur + hairline border. */
+.glass-card {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-surface {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+/* Ambient background glow used behind the app shell to keep pure-black
+   surfaces from feeling flat, echoing the "soft blue glow" called out for
+   the stats card in the design system. */
+.ambient-glow {
+  background:
+    radial-gradient(600px circle at 15% -10%, rgba(93, 168, 255, 0.10), transparent 60%),
+    radial-gradient(500px circle at 90% 10%, rgba(93, 168, 255, 0.06), transparent 55%),
+    #050505;
+}
+
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up { animation: fade-up 0.25s cubic-bezier(0.4,0,0.2,1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

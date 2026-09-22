@@ -1,0 +1,129 @@
+# Production compose file — deliberately separate from docker-compose.yml
+# (the local-dev file, which `build:`s from source) rather than an
+# override of it. Compose's merge rules don't cleanly *remove* a `build:`
+# key from a base service, so mixing "pull a prebuilt image" and "build
+# locally" into one file via overrides is more error-prone than just
+# having two small, complete files. This one is written to need nothing
+# from the repo except itself + Caddyfile + db-backup/backup.sh + two env
+# files — see DEPLOYMENT.md. The CI/CD workflow (.github/workflows/ci.yml)
+# builds and pushes the images this file pulls; BACKEND_IMAGE and
+# FRONTEND_IMAGE are exported by that workflow's deploy step, or set them
+# yourself in a .env file next to this one for a manual deploy.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env next to this file}
+      POSTGRES_DB: estate_visitor
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # No published port — unlike docker-compose.yml's local-dev version,
+    # nothing outside this compose network needs to reach Postgres
+    # directly in production.
+
+  backend:
+    image: ${BACKEND_IMAGE:?Set BACKEND_IMAGE, e.g. ghcr.io/you/entryva-backend:latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ./backend.env
+    environment:
+      # Overrides whatever DATABASE_URL is in backend.env — the hostname
+      # inside this compose network is always "postgres", and the
+      # password lives once, here, not duplicated into backend.env too.
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/estate_visitor?schema=public
+      # Set by the CD workflow's deploy step (github.sha) — surfaced at
+      # GET /api/health so you can confirm which commit is actually
+      # running after a deploy. Not baked into the image, so it works
+      # correctly however many times this same image gets redeployed.
+      GIT_SHA: ${GIT_SHA:-unknown}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  frontend:
+    image: ${FRONTEND_IMAGE:?Set FRONTEND_IMAGE, e.g. ghcr.io/you/entryva-frontend:latest}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    # No env_file: NEXT_PUBLIC_API_BASE_URL is a build-time value already
+    # baked into this image (see frontend/Dockerfile's ARG and the CI
+    # workflow's build-args) — there is nothing left for the frontend
+    # container to read from the environment at runtime.
+
+  # CLAUDE.md §11 lists automated DB backups as in-scope V1 infra — same
+  # backup.sh as docker-compose.yml's local-dev version, just fetched by
+  # the deploy step instead of being part of a full checkout.
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: estate_visitor
+      BACKUP_INTERVAL_SECONDS: 86400
+      BACKUP_RETENTION_DAYS: 14
+    volumes:
+      - ./db-backup/backup.sh:/backup.sh:ro
+      - postgres_backups:/backups
+    entrypoint: ["/bin/sh", "/backup.sh"]
+
+  # The only service that binds a public port. Caddy gets your domain's
+  # TLS certificate from Let's Encrypt automatically on first boot (needs
+  # DNS for DOMAIN already pointed at this host, and ports 80+443 open)
+  # and reverse-proxies / -> frontend, /api/* -> backend, on one
+  # certificate for one domain — see Caddyfile.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env next to this file, e.g. entryva.example.com}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  # Officer-to-officer calling's TURN relay (see backend/src/modules/realtime
+  # and coturn/README.md). Off by default — most estates work fine on STUN
+  # alone, and this needs network_mode: host plus its own DNS record and
+  # open UDP port range, which is a deliberate extra step, not a default.
+  # Enable with: docker compose -f docker-compose.prod.yml --profile calling up -d
+  coturn:
+    image: coturn/coturn:4.6
+    restart: unless-stopped
+    profiles: ["calling"]
+    network_mode: host
+    volumes:
+      - ./coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+    command: ["-c", "/etc/coturn/turnserver.conf"]
+
+volumes:
+  postgres_data:
+  postgres_backups:
+  caddy_data:
+  caddy_config:

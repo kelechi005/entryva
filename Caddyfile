@@ -1,0 +1,23 @@
+# One domain, one TLS certificate (auto-issued and auto-renewed by Caddy
+# via Let's Encrypt — nothing to configure beyond DNS pointing at this
+# host). Routes /api/* to the backend and everything else to the
+# frontend, which is why NEXT_PUBLIC_API_BASE_URL is just
+# "https://<your domain>/api" — same origin, so cookies (the httpOnly
+# auth cookies backend/src/main.ts sets) work without any cross-site
+# cookie configuration.
+#
+# {$DOMAIN} is substituted from the DOMAIN environment variable that
+# docker-compose.prod.yml passes into this container (see the caddy
+# service there) — this file itself needs no per-deploy edits.
+
+{$DOMAIN} {
+	handle /api/* {
+		reverse_proxy backend:4000
+	}
+
+	handle {
+		reverse_proxy frontend:3000
+	}
+
+	encode gzip
+}
