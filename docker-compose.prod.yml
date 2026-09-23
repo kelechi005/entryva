@@ -48,7 +48,7 @@ services:
       # correctly however many times this same image gets redeployed.
       GIT_SHA: ${GIT_SHA:-unknown}
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health/ready || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/api/health/ready || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
