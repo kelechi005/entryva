@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 import { sha256Hex, canonicalizeForSigning, importOfflinePublicKey, verifyManifestEntry } from '../crypto';
 import { generateTestKeyPair, signEntry } from '@/test-utils/offline-signing';
 
