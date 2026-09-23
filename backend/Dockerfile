@@ -47,6 +47,8 @@ RUN addgroup -g 1001 -S nestjs && adduser -S nestjs -u 1001
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/src ./src
+COPY --from=build /app/tsconfig.json ./tsconfig.json
 COPY package.json ./
 USER nestjs
 EXPOSE 4000
