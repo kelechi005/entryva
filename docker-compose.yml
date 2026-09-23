@@ -30,7 +30,7 @@ services:
       # GET /health/ready (see backend/src/modules/health) — checks the
       # process is up AND can actually reach the database, not just that
       # the port is open.
-      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health/ready || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/api/health/ready || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
