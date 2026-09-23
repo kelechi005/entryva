@@ -82,14 +82,10 @@ export function InvitationTicket({ invitation, qrValue, actions }: InvitationTic
             <QRCodeSVG value={qrValue} size={168} fgColor="#050505" bgColor="#FFFFFF" />
           </div>
           {/*
-            Only CreatedInvitation ever has a real display code — it's a
-            one-time secret shown to the resident at creation and never
-            recoverable afterward (see backend InvitationsService), so
-            PublicInvitation (this link, opened later by anyone) has no
-            'displayCode' field at all. Previously this rendered a
-            hardcoded '\u2022\u2022\u2022\u2022\u2022\u2022' placeholder
-            unconditionally, which looked like a real (if oddly styled)
-            code with nothing behind it.
+            Both CreatedInvitation and PublicInvitation carry a real
+            displayCode now — the backend recomputes it deterministically
+            from the secure token (see token.util.ts deriveDisplayCode),
+            rather than only having it available once at creation time.
           */}
           {'displayCode' in invitation && (
             <div className="flex flex-col items-center gap-1">

@@ -61,8 +61,5 @@ export interface PublicInvitation {
   validFrom: string;
   validUntil: string;
   status: InvitationStatus;
-  // No displayCode — see backend InvitationsService.findPublicByToken.
-  // The real code only ever existed in memory once, at creation, for
-  // the resident who made this invitation; it can't be recovered later
-  // to show whoever opens this link.
+  displayCode: string; // recomputed from the token by the backend
 }

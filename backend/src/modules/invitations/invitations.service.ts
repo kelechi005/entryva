@@ -1,6 +1,6 @@
 import { ForbiddenException, GoneException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { generateDisplayCode, generateSecureToken, hashSecret } from '../../common/crypto/token.util';
+import { deriveDisplayCode, generateSecureToken, hashSecret } from '../../common/crypto/token.util';
 import { resolveVisitWindow } from '../../common/time/visit-window.util';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -36,12 +36,7 @@ export interface PublicInvitationResponse {
   validFrom: string;
   validUntil: string;
   status: string;
-  // No displayCode here — see findPublicByToken for why. This response
-  // shape was previously typed as if a code were always available and
-  // filled it with a hardcoded '\u2022\u2022\u2022\u2022\u2022\u2022'
-  // placeholder, which rendered as six literal bullet characters with
-  // no way for the visitor to tell it apart from a real (if oddly
-  // styled) code — reported as "the manual code was not displayed."
+  displayCode: string; // recomputed from the token, not stored separately
 }
 
 @Injectable()
@@ -88,7 +83,7 @@ export class InvitationsService {
     });
 
     const secureToken = generateSecureToken();
-    const displayCode = generateDisplayCode();
+    const displayCode = deriveDisplayCode(secureToken);
 
     const invitation = await this.prisma.invitation.create({
       data: {
@@ -192,13 +187,10 @@ export class InvitationsService {
       validFrom: invitation.validFrom.toISOString(),
       validUntil: invitation.validUntil.toISOString(),
       status: invitation.status,
-      // The plaintext display code only ever exists in memory, once, at
-      // creation (see createInvitation below) — only displayCodeHash is
-      // persisted, by design (schema.prisma: "Never store raw secrets").
-      // It genuinely cannot be recovered here to show the visitor later,
-      // so this response doesn't pretend to have one. The resident is
-      // the one who sees and relays the real code, at creation time, if
-      // they choose to share it as a fallback alongside the link.
+      // Recomputed from the raw token (which the visitor already holds,
+      // it's this very URL) rather than read from storage — only the
+      // hash is ever persisted. See deriveDisplayCode's doc comment.
+      displayCode: deriveDisplayCode(token),
     };
   }
 
