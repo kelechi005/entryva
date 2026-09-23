@@ -65,6 +65,7 @@ export interface CallManager {
   incomingCall: IncomingCallInfo | null;
   peerName: string | null;
   errorMessage: string | null;
+  connectedAt: number | null;
   startCall: (officer: OnlineOfficer) => void;
   acceptCall: () => void;
   declineCall: () => void;
@@ -82,6 +83,12 @@ export function useCallManager(): CallManager {
   const [peerName, setPeerName] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
+  // Timestamp (Date.now()) the call actually connected — drives the
+  // elapsed-time display on the full-screen call UI. Set once per call
+  // (guarded against being overwritten by a second 'connected' event —
+  // onconnectionstatechange can fire 'connected' more than once, e.g.
+  // after an ICE restart) and cleared in cleanup().
+  const [connectedAt, setConnectedAt] = useState<number | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -104,6 +111,7 @@ export function useCallManager(): CallManager {
     iceQueueRef.current = [];
     remoteDescriptionSetRef.current = false;
     setMuted(false);
+    setConnectedAt(null);
     if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
   }, []);
 
@@ -141,7 +149,10 @@ export function useCallManager(): CallManager {
       };
 
       pc.onconnectionstatechange = () => {
-        if (pc.connectionState === 'connected') setPhase('connected');
+        if (pc.connectionState === 'connected') {
+          setPhase('connected');
+          setConnectedAt((prev) => prev ?? Date.now());
+        }
         if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
           if (pc.connectionState === 'failed') setErrorMessage('Call connection failed.');
           endCall('ended');
@@ -307,6 +318,7 @@ export function useCallManager(): CallManager {
       sendSignal(fromUserId, callId, { kind: 'answer', sdp: answer });
       socketRef.current?.emit('call:accept', { callId, toUserId: fromUserId });
       setPhase('connected');
+      setConnectedAt((prev) => prev ?? Date.now());
     } catch {
       setErrorMessage(
         'Could not answer the call — check microphone permissions.',
@@ -364,6 +376,7 @@ export function useCallManager(): CallManager {
     incomingCall,
     peerName,
     errorMessage,
+    connectedAt,
     startCall,
     acceptCall,
     declineCall,

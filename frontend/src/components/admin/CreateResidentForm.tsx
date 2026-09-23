@@ -12,6 +12,7 @@ import { Field } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import { CopyLinkBox } from '@/components/admin/CopyLinkBox';
 import { apiFetch } from '@/lib/api-client';
+import { useAutoDismiss } from '@/hooks/useAutoDismiss';
 import type { AdminApartment } from '@/types/admin';
 
 interface CreateResidentFormProps {
@@ -24,6 +25,7 @@ export function CreateResidentForm({ onCreated }: CreateResidentFormProps) {
   const [apartmentId, setApartmentId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  useAutoDismiss(success, () => setSuccess(null));
   // Set only when the invite was created but the email failed to send
   // (see EmailService/ResidentInvitesService — a delivery failure is
   // deliberately non-fatal to invite creation) — the link is the

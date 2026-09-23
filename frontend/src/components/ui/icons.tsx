@@ -323,6 +323,16 @@ export function GlobeIcon({ className = 'h-4 w-4' }: IconProps) {
   );
 }
 
+export function MicIcon({ className = 'h-4 w-4' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>
+      <path d="M9 5.5a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0Z" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6 11a6 6 0 0 0 12 0" strokeWidth="1.75" strokeLinecap="round" />
+      <path d="M12 17v3M9 20h6" strokeWidth="1.75" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function MicOffIcon({ className = 'h-4 w-4' }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={`${base} ${className}`}>

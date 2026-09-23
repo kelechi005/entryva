@@ -25,6 +25,17 @@ html, body {
   border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
+/* Solid, opaque panel for floating overlays that sit on top of
+   arbitrary page content (notification dropdown, menus). glass-surface
+   is deliberately translucent (6% white) — great for chrome that's
+   meant to feel like part of the ambient background, unreadable for a
+   popover that needs its own content to always be legible regardless
+   of what's stacked underneath it. */
+.dropdown-panel {
+  background: #111111;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
 /* Ambient background glow used behind the app shell to keep pure-black
    surfaces from feeling flat, echoing the "soft blue glow" called out for
    the stats card in the design system. */

@@ -5,7 +5,7 @@
 // resident recognizes the same product), and a plain white form panel —
 // the two registers (warmth vs. operational) meeting at one edge.
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Field } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
@@ -17,11 +17,35 @@ export default function LoginPage() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // Separate from `error` deliberately — this isn't a failed attempt on
+  // *this* screen, it's context for why the person landed back here at
+  // all (see api-client.ts's forceSessionLogout), so it reads and is
+  // styled as a neutral notice rather than a red alert.
+  const [notice, setNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Read directly off window.location rather than useSearchParams() —
+  // this hard-navigation redirect only ever happens in the real browser
+  // (forceSessionLogout no-ops in non-browser/test environments), so
+  // there's nothing to gain from wiring up Next's search-params hook
+  // (and the Suspense boundary it'd require) for a value that's only
+  // ever read once, on mount. The param is stripped from the URL right
+  // after so a manual refresh of /login doesn't keep re-showing it.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('sessionExpired') === '1') {
+      setNotice('Your session has expired. Please sign in again.');
+      params.delete('sessionExpired');
+      const rest = params.toString();
+      window.history.replaceState(null, '', rest ? `${window.location.pathname}?${rest}` : window.location.pathname);
+    }
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setNotice(null);
 
     if (!identifier.trim() || !password) {
       setError('Enter your email or phone number and password.');
@@ -112,6 +136,12 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
               />
+
+              {notice && !error && (
+                <p role="status" className="rounded-lg bg-warn-50 px-4 py-3 text-sm text-warn">
+                  {notice}
+                </p>
+              )}
 
               {error && (
                 <p role="alert" className="rounded-lg bg-alert-50 px-4 py-3 text-sm text-alert">

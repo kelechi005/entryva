@@ -59,7 +59,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="glass-surface absolute right-0 z-20 mt-2 w-80 overflow-hidden rounded-card shadow-card animate-fade-up">
+        <div className="dropdown-panel absolute right-0 z-20 mt-2 w-80 overflow-hidden rounded-card shadow-card animate-fade-up">
           <div className="flex items-center justify-between border-b border-ink-100 px-4 py-3.5">
             <span className="font-display text-base font-semibold text-ink">Notifications</span>
             {unreadCount > 0 && (

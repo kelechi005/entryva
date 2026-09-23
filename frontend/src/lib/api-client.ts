@@ -31,6 +31,33 @@ export class SessionExpiredError extends Error {
   }
 }
 
+// Previously, a SessionExpiredError just propagated up to whichever page
+// happened to be open, which caught it the same as any other request
+// error and rendered its message inline via setError — the page itself
+// never redirected, so the officer/resident was left staring at a dead
+// screen with a permanent "session expired" banner and no logged-out
+// state (still on /gate, still showing stale data, every subsequent
+// action failing the same way). A session that's actually gone needs to
+// take the whole screen down, not decorate it with a sentence.
+//
+// A hard `window.location` navigation (not router.push) is deliberate:
+// it forces a full reload, which throws away every bit of in-memory
+// React state across the whole app in one move — there is no other
+// reliable way to guarantee a stale dashboard, a half-filled form, or a
+// live call doesn't keep running underneath. Guarded so this can't loop
+// if it's somehow triggered while already on /login.
+function forceSessionLogout(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (window.location.pathname.startsWith('/login')) return;
+    window.location.href = '/login?sessionExpired=1';
+  } catch {
+    // Non-browser/test environments (e.g. jsdom under Jest) may not
+    // implement navigation — the redirect is a real-browser concern
+    // only, so a failure here is safe to swallow.
+  }
+}
+
 // Concurrent requests that all hit a 401 at once (e.g. a page firing
 // several apiFetch calls via Promise.all) must trigger exactly one
 // refresh, not one per request — sharing this in-flight promise ensures
@@ -77,6 +104,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit, _isRetry = f
     if (refreshed) {
       return apiFetch<T>(path, init, true);
     }
+    forceSessionLogout();
     throw new SessionExpiredError();
   }
 

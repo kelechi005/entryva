@@ -15,6 +15,7 @@ import { VerificationResultCard } from '@/components/security/VerificationResult
 import { StatCard } from '@/components/ui/StatCard';
 import { apiFetch } from '@/lib/api-client';
 import { formatRelativeTime } from '@/lib/format';
+import { useAutoDismiss } from '@/hooks/useAutoDismiss';
 import type { VerificationResult } from '@/types/verification';
 import type { CurrentVisitor, EntryExitHistoryItem } from '@/types/entry-exit';
 import type { AuthenticatedUser } from '@/types/auth';
@@ -97,6 +98,7 @@ export default function SecurityGatePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
+  useAutoDismiss(banner, () => setBanner(null));
 
   const [mode, setMode] = useState<Mode>('home');
   const [cameraUnavailable, setCameraUnavailable] = useState(false);
