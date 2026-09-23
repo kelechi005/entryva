@@ -2,6 +2,7 @@ FROM node:20-alpine AS base
 WORKDIR /app
 
 FROM base AS deps
+RUN apk add --no-cache openssl
 COPY package.json package-lock.json* ./
 RUN npm config set fetch-timeout 600000 \
  && npm config set fetch-retries 5 \
@@ -14,6 +15,7 @@ RUN npm config set fetch-timeout 600000 \
     done
 
 FROM base AS build
+RUN apk add --no-cache openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN for i in 1 2 3; do \
@@ -32,6 +34,7 @@ RUN npm run build
 RUN npm prune --omit=dev
 
 FROM base AS runtime
+RUN apk add --no-cache openssl
 ENV NODE_ENV=production
 # Run as an unprivileged user rather than root — standard hardening,
 # same pattern as frontend/Dockerfile.
