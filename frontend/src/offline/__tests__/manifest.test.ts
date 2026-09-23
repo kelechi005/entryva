@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 import 'fake-indexeddb/auto';
 import { generateTestKeyPair, signEntry } from '@/test-utils/offline-signing';
 import type { OfflineManifestEntry } from '../manifest-types';
