@@ -1,5 +1,6 @@
 import { ForbiddenException, GoneException, NotFoundException } from '@nestjs/common';
 import { InvitationsService, ResidentContext } from './invitations.service';
+import { deriveDisplayCode } from '../../common/crypto/token.util';
 
 function makeCtx(overrides: Partial<ResidentContext> = {}): ResidentContext {
   return {
@@ -194,12 +195,12 @@ describe('InvitationsService', () => {
       const serialized = JSON.stringify(result);
       expect(serialized).not.toContain('deadbeef');
       expect(serialized).not.toContain('inv-1');
-      // The real code only ever existed in memory at creation time —
-      // it's not recoverable from displayCodeHash, so this response
-      // must not claim to have one at all (previously hardcoded a
-      // '\u2022\u2022\u2022\u2022\u2022\u2022' placeholder here instead,
-      // which looked like a real value to anyone reading the response).
-      expect(result).not.toHaveProperty('displayCode');
+      // displayCode is now recomputed from the raw token on every call
+      // (see deriveDisplayCode) rather than read from storage, so it's
+      // expected here — deterministic, always the same 6-char value for
+      // this same token, and never the same as the stored hashes above.
+      expect(result.displayCode).toBe(deriveDisplayCode('sometoken'));
+      expect(result.displayCode).toMatch(/^[A-Z0-9]{6}$/);
     });
 
     it('throws NotFoundException for an unknown token', async () => {
