@@ -123,13 +123,6 @@ export default function LoginPage() {
                 {submitting ? 'Signing in\u2026' : 'Sign in'}
               </Button>
             </form>
-
-            <p className="mt-6 text-center text-sm text-ink-400">
-              Don&rsquo;t have an account?{' '}
-              <a href="mailto:admin@estate.com" className="font-medium text-ink underline">
-                Contact your admin
-              </a>
-            </p>
           </div>
         </section>
       </div>

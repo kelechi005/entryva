@@ -197,7 +197,15 @@ export default function SecurityGatePage() {
     setCameraUnavailable(false);
   }
 
-  async function handleVerifyQr(token: string) {
+  async function handleVerifyQr(rawScan: string) {
+    // The QR encodes the full shareable invite URL (see InvitationTicket /
+    // InvitationsService.createInvitation — qrValue is created.shareUrl),
+    // not the bare token, so the visitor link works if opened directly.
+    // A camera scan hands back that raw decoded string; extracting just
+    // the last path segment recovers the actual token the backend hashes
+    // and looks up. If a scan or offline-cached value is somehow already
+    // a bare token (no slashes), it's used as-is.
+    const token = rawScan.includes('/') ? rawScan.split('/').filter(Boolean).pop()! : rawScan;
     try {
       const res = await apiFetch<VerificationResult>('/verification/qr', {
         method: 'POST',
