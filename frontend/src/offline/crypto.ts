@@ -42,14 +42,17 @@ function sortKeysDeep(value: unknown): unknown {
   return value;
 }
 
-function base64ToBytes(b64: string): ArrayBuffer {
+function base64ToBytes(b64: string): Uint8Array {
+  const nodeBuffer = (globalThis as { Buffer?: { from(input: string, encoding: string): Uint8Array } }).Buffer;
+  if (nodeBuffer) return Uint8Array.from(nodeBuffer.from(b64, 'base64'));
+
   const raw = atob(b64);
   const bytes = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i += 1) bytes[i] = raw.charCodeAt(i);
-  return bytes.buffer;
+  return bytes;
 }
 
-function pemToDer(pem: string): ArrayBuffer {
+function pemToDer(pem: string): Uint8Array {
   const b64 = pem
     .replace(/-----BEGIN [^-]+-----/, '')
     .replace(/-----END [^-]+-----/, '')
