@@ -14,13 +14,17 @@ import { usePathname } from 'next/navigation';
 import { LogoutButton } from '@/components/ui/LogoutButton';
 import { CallProvider } from '@/lib/calls/CallProvider';
 import { CallOverlay } from '@/components/security/CallOverlay';
-import { OfficerPresenceList } from '@/components/security/OfficerPresenceList';
-import { ShieldIcon, ClockIcon } from '@/components/ui/icons';
+import { ShieldIcon, ClockIcon, PhoneIcon } from '@/components/ui/icons';
 
 const NAV_ITEMS = [
   { href: '/gate', label: 'Gate', icon: ShieldIcon },
   { href: '/history', label: 'History', icon: ClockIcon },
 ];
+
+// Call is mobile-only (see /call/page.tsx for why), so it's a separate
+// list rather than a third NAV_ITEMS entry — the desktop sidebar below
+// maps NAV_ITEMS only, the mobile dock maps MOBILE_NAV_ITEMS.
+const MOBILE_NAV_ITEMS = [...NAV_ITEMS, { href: '/call', label: 'Call', icon: PhoneIcon }];
 
 export default function SecurityLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -63,22 +67,16 @@ export default function SecurityLayout({ children }: { children: React.ReactNode
           </nav>
 
           <div className="mt-auto flex flex-col gap-3 border-t border-ink-100 pt-4">
-            <div className="px-1">
-              <OfficerPresenceList />
-            </div>
             <LogoutButton className="px-2" />
           </div>
         </aside>
 
         {/* Mobile / tablet top bar */}
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-ink-100 bg-black/40 px-5 py-4 backdrop-blur-glass lg:hidden">
-          <span className="flex items-center gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element -- small local asset */}
-            <img src="/brand/entryva-mark.png" alt="" className="h-8 w-8 rounded-lg" />
-            {/* eslint-disable-next-line @next/next/no-img-element -- small local asset */}
-            <img src="/brand/entryva-logo-full.png" alt="Entryva" className="h-4 w-auto" />
-          </span>
-          <OfficerPresenceList />
+        <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-ink-100 bg-black/40 px-5 py-4 backdrop-blur-glass lg:hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element -- small local asset */}
+          <img src="/brand/entryva-mark.png" alt="" className="h-8 w-8 rounded-lg" />
+          {/* eslint-disable-next-line @next/next/no-img-element -- small local asset */}
+          <img src="/brand/entryva-logo-full.png" alt="Entryva" className="h-4 w-auto" />
         </header>
 
         <div className="lg:pl-64">
@@ -88,14 +86,14 @@ export default function SecurityLayout({ children }: { children: React.ReactNode
         {/* Mobile floating glass dock */}
         <nav className="fixed inset-x-0 bottom-6 z-40 flex justify-center px-6 lg:hidden">
           <div className="flex items-center gap-1 rounded-pill border border-ink-100 bg-[rgba(20,20,20,0.85)] px-2 py-2 shadow-card backdrop-blur-dock">
-            {NAV_ITEMS.map((item) => {
+            {MOBILE_NAV_ITEMS.map((item) => {
               const active = isActive(item.href);
               const Icon = item.icon;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex flex-col items-center gap-0.5 rounded-full px-6 py-2 text-[11px] font-medium transition-colors duration-150 ease-premium ${
+                  className={`flex flex-col items-center gap-0.5 rounded-full px-4 py-2 text-[11px] font-medium transition-colors duration-150 ease-premium ${
                     active ? 'text-brass' : 'text-ink-400'
                   }`}
                 >
@@ -104,7 +102,7 @@ export default function SecurityLayout({ children }: { children: React.ReactNode
                 </Link>
               );
             })}
-            <LogoutButton className="px-4 !text-[11px]" />
+            <LogoutButton className="px-3 !text-[11px]" />
           </div>
         </nav>
 

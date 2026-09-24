@@ -3,10 +3,13 @@ node_modules/
 
 # Env files — never commit real secrets. .env.example files ARE meant
 # to be committed (no real values in them) and are explicitly un-ignored
-# below.
+# below. Matches both leading-dot (.env, .env.production) and
+# trailing-dot (deploy/backend.env) naming.
 .env
 .env.*
+*.env
 !.env.example
+!*.env.example
 
 # Build output
 backend/dist/
@@ -32,3 +35,4 @@ coverage/
 # Local backups produced by db-backup/backup.sh if run outside Docker
 db-backup/*.sql
 db-backup/*.sql.gz
+backed.env

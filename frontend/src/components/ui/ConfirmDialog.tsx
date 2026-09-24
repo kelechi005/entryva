@@ -7,6 +7,7 @@
 // "Sign out" can't end a session the officer/resident didn't mean to end.
 
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/Button';
 
 interface ConfirmDialogProps {
@@ -45,7 +46,18 @@ export function ConfirmDialog({
 
   if (!open) return null;
 
-  return (
+  // Rendered via a portal into document.body, not inline where the
+  // button lives. On the mobile security layout, LogoutButton sits
+  // inside the floating dock — a div with backdrop-blur applied, which
+  // (like `filter`) establishes a new containing block for any
+  // `position: fixed` descendant. Without the portal, this dialog's
+  // `fixed inset-0` was resolving against that small pill-shaped dock,
+  // not the viewport, so it rendered squashed into the bottom corner
+  // instead of centered over the whole screen — exactly the "not
+  // positioned well on mobile" bug. Escaping to document.body sidesteps
+  // that regardless of which ancestor (dock, sidebar, anything added
+  // later) the trigger button happens to be nested inside.
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -75,6 +87,7 @@ export function ConfirmDialog({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
