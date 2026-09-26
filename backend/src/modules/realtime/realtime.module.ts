@@ -6,5 +6,6 @@ import { RealtimeService } from './realtime.service';
 @Module({
   controllers: [RealtimeController],
   providers: [CallsGateway, RealtimeService],
+  exports: [CallsGateway],
 })
 export class RealtimeModule {}

@@ -18,6 +18,13 @@ export function formatShortDate(iso: string): string {
   });
 }
 
+/** "3:45 PM" -- used for individual message timestamps in a chat thread,
+ * where absolute time reads better than "5m ago" once you're scrolling
+ * through a whole conversation. */
+export function formatClockTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
 /** "just now" / "5m ago" / "3h ago" / falls back to formatShortDate beyond a day. */
 export function formatRelativeTime(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();

@@ -178,6 +178,18 @@ export class CallsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
+  /**
+   * Called by MessagesController after a message is durably persisted,
+   * to push it live to the recipient if they're currently connected --
+   * the chat equivalent of call:incoming. If they're not online, this
+   * is a no-op; they'll see it via GET /messages/thread/:userId next
+   * time they open the app, same as any offline-delivery message system.
+   */
+  pushMessage(estateId: string, toUserId: string, message: object) {
+    const target = this.presence.get(estateId)?.get(toUserId);
+    if (target) this.server.to(target.socketId).emit('message:new', message);
+  }
+
   private relayToUser(fromSocket: Socket, toUserId: string, event: string, payload: Record<string, unknown>) {
     const estateId = fromSocket.data.estateId as string;
     const target = this.presence.get(estateId)?.get(toUserId);

@@ -113,6 +113,8 @@ model User {
   securityOfficerProfile SecurityOfficerProfile?
   auditLogs               AuditLog[]
   residentInvitesSent     ResidentInvite[]
+  messagesSent            OfficerMessage[] @relation("OfficerMessagesSent")
+  messagesReceived        OfficerMessage[] @relation("OfficerMessagesReceived")
 
   @@index([role])
 }
@@ -136,6 +138,7 @@ model Estate {
   residentInvites  ResidentInvite[]
   auditLogs        AuditLog[]
   admins           User[]
+  officerMessages  OfficerMessage[]
 }
 
 // ---------------------------------------------------------------------------
@@ -421,4 +424,34 @@ model OfflineSyncEvent {
   @@index([deviceId])
   @@index([estateId])
   @@index([securityOfficerId])
+}
+
+// ---------------------------------------------------------------------------
+// Officer-to-officer intercom: direct messages, alongside the WebRTC calls
+// (see CallsGateway). Deliberately its own model rather than reusing
+// Notification -- a Notification is one-directional (system -> user) and
+// has no concept of a conversation thread or a sender; a message thread
+// needs both parties queryable efficiently in either direction (see the
+// two indexes below), which Notification's shape doesn't support without
+// contorting it.
+model OfficerMessage {
+  id         String    @id @default(cuid())
+  estateId   String
+  estate     Estate    @relation(fields: [estateId], references: [id], onDelete: Cascade)
+  fromUserId String
+  fromUser   User      @relation("OfficerMessagesSent", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUserId   String
+  toUser     User      @relation("OfficerMessagesReceived", fields: [toUserId], references: [id], onDelete: Cascade)
+  body       String
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  // Covers "history with officer X, newest first" from either side of the
+  // conversation (a->b and b->a are two distinct rows, never merged, so
+  // both directions need their own lookup path).
+  @@index([estateId, fromUserId, toUserId, createdAt])
+  @@index([estateId, toUserId, fromUserId, createdAt])
+  // Unread-count-per-sender lookups (toUserId, readAt IS NULL, grouped by
+  // fromUserId) for the officer list screen.
+  @@index([estateId, toUserId, readAt])
 }

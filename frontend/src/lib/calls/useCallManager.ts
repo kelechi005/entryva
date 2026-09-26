@@ -66,6 +66,15 @@ export interface CallManager {
   peerName: string | null;
   errorMessage: string | null;
   connectedAt: number | null;
+  // Exposed so useMessaging (a sibling hook, not a concern of this one)
+  // can listen for 'message:new' on the same authenticated connection
+  // instead of opening a second socket to the same namespace. Calls and
+  // messages are two features sharing one already-authenticated pipe,
+  // not two unrelated systems that happen to coexist.
+  socket: Socket | null;
+  // Also exposed for useMessaging -- it needs to tell "a message I sent"
+  // from "a message sent to me" without a second /auth/me round trip.
+  ownUserId: string | null;
   startCall: (officer: OnlineOfficer) => void;
   acceptCall: () => void;
   declineCall: () => void;
@@ -377,6 +386,8 @@ export function useCallManager(): CallManager {
     peerName,
     errorMessage,
     connectedAt,
+    socket: socketRef.current,
+    ownUserId,
     startCall,
     acceptCall,
     declineCall,

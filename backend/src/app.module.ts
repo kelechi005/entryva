@@ -18,6 +18,7 @@ import { AdministrationModule } from './modules/administration/administration.mo
 import { ResidentInvitesModule } from './modules/resident-invites/resident-invites.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { HealthModule } from './modules/health/health.module';
+import { MessagesModule } from './modules/messages/messages.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { HealthModule } from './modules/health/health.module';
     ResidentInvitesModule,
     RealtimeModule,
     HealthModule,
+    MessagesModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

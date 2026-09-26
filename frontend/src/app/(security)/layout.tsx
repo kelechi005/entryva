@@ -15,6 +15,7 @@ import { LogoutButton } from '@/components/ui/LogoutButton';
 import { CallProvider } from '@/lib/calls/CallProvider';
 import { CallOverlay } from '@/components/security/CallOverlay';
 import { ShieldIcon, ClockIcon, PhoneIcon } from '@/components/ui/icons';
+import { CallUnreadBadge } from '@/components/security/CallUnreadBadge';
 
 const NAV_ITEMS = [
   { href: '/gate', label: 'Gate', icon: ShieldIcon },
@@ -97,7 +98,10 @@ export default function SecurityLayout({ children }: { children: React.ReactNode
                     active ? 'text-brass' : 'text-ink-400'
                   }`}
                 >
-                  <Icon className="h-5 w-5" />
+                  <span className="relative">
+                    <Icon className="h-5 w-5" />
+                    {item.href === '/call' && <CallUnreadBadge />}
+                  </span>
                   {item.label}
                 </Link>
               );
