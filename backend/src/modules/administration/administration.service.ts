@@ -691,6 +691,7 @@ export class AdministrationService {
       where: {
         estateId,
         employeeCode,
+        user: { status: { not: 'REMOVED' } },
         ...(excludeOfficerId ? { id: { not: excludeOfficerId } } : {}),
       },
     });
