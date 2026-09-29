@@ -761,6 +761,10 @@ export class AdministrationService {
         // but still an intentional value, unlike dto.address === undefined.
         address: dto.address !== undefined ? dto.address.trim() : undefined,
         timezone: dto.timezone,
+        city: dto.city !== undefined ? dto.city.trim() : undefined,
+        state: dto.state !== undefined ? dto.state.trim() : undefined,
+        country: dto.country !== undefined ? dto.country.trim() : undefined,
+        contactPhone: dto.contactPhone !== undefined ? dto.contactPhone.trim() : undefined,
       },
     });
 
@@ -783,11 +787,12 @@ export class AdministrationService {
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
-    const [totalResidents, totalApartments, totalSecurityOfficers, visitorsToday] =
+    const [totalResidents, totalBuildings, totalApartments, totalSecurityOfficers, visitorsToday] =
       await Promise.all([
         this.prisma.residentProfile.count({
           where: { estateId: scopedEstateId, user: { status: { not: 'REMOVED' } } },
         }),
+        this.prisma.building.count({ where: { estateId: scopedEstateId } }),
         this.prisma.apartment.count({ where: { estateId: scopedEstateId } }),
         this.prisma.securityOfficerProfile.count({
           where: { estateId: scopedEstateId, user: { status: { not: 'REMOVED' } } },
@@ -797,6 +802,6 @@ export class AdministrationService {
         }),
       ]);
 
-    return { totalResidents, totalApartments, totalSecurityOfficers, visitorsToday };
+    return { totalResidents, totalBuildings, totalApartments, totalSecurityOfficers, visitorsToday };
   }
 }

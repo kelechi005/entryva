@@ -109,6 +109,48 @@ export class EmailService {
     return this.send({ to: params.to, subject, text, html });
   }
 
+  async sendSignupVerificationEmail(params: {
+    to: string;
+    adminName: string;
+    estateName: string;
+    verifyUrl: string;
+    expiresAt: Date;
+  }): Promise<EmailSendResult> {
+    const expiresLabel = params.expiresAt.toUTCString();
+    const subject = `Confirm your email to activate ${params.estateName} on Entryva`;
+
+    const text =
+      `Hi ${params.adminName},\n\n` +
+      `Someone (hopefully you) registered ${params.estateName} on Entryva. ` +
+      `Confirm your email to activate the estate and sign in:\n${params.verifyUrl}\n\n` +
+      `This link works once and expires ${expiresLabel}.\n\n` +
+      `If you didn't sign up, ignore this email — nothing is created until the link is opened.`;
+
+    const html = `
+      <div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;color:#1a1a1a">
+        <p style="font-size:16px;line-height:1.5">Hi ${escapeHtml(params.adminName)},</p>
+        <p style="font-size:16px;line-height:1.5">
+          Someone (hopefully you) registered <strong>${escapeHtml(params.estateName)}</strong> on Entryva.
+          Confirm your email to activate the estate and sign in.
+        </p>
+        <p style="margin:28px 0">
+          <a href="${params.verifyUrl}"
+             style="background:#111827;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">
+            Confirm email &amp; activate
+          </a>
+        </p>
+        <p style="font-size:13px;color:#6b7280;line-height:1.5">
+          This link works once and expires ${escapeHtml(expiresLabel)}.
+        </p>
+        <p style="font-size:13px;color:#6b7280;line-height:1.5">
+          If you didn't sign up, ignore this email — nothing is created until the link is opened.
+        </p>
+        <p style="margin-top:24px;font-size:12px;color:#9ca3af">Sent via Entryva</p>
+      </div>`;
+
+    return this.send({ to: params.to, subject, text, html });
+  }
+
   /**
    * A failed send must never throw into the caller's transaction — same
    * reasoning as NotificationsService.dispatch(). Resend (the "resend

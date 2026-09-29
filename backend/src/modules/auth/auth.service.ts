@@ -23,7 +23,11 @@ export class AuthService {
 
   async login(dto: LoginDto): Promise<TokenPair & { userId: string }> {
     const user = await this.prisma.user.findFirst({
-      where: { OR: [{ email: dto.identifier }, { phone: dto.identifier }] },
+      // Email match is case-insensitive: signup lowercases addresses, and
+      // people type "Ada@Example.com" on a phone keyboard all the time.
+      where: {
+        OR: [{ email: { equals: dto.identifier, mode: 'insensitive' } }, { phone: dto.identifier }],
+      },
     });
 
     // Constant-shape response whether the user exists or the password is
@@ -138,6 +142,22 @@ export class AuthService {
 
   async logout(userId: string): Promise<void> {
     await this.prisma.user.update({ where: { id: userId }, data: { refreshTokenHash: null } });
+  }
+
+  /**
+   * Issues a fresh session for a user who has just proven who they are
+   * by some means other than the password form (e.g. clicking a
+   * one-time email verification link on signup). Same bookkeeping as a
+   * normal login: stores the refresh-token hash and stamps lastLoginAt.
+   * Callers are responsible for having authenticated the user first.
+   */
+  async startSession(userId: string): Promise<TokenPair> {
+    const tokens = await this.issueTokens(userId);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { lastLoginAt: new Date(), refreshTokenHash: this.hashToken(tokens.refreshToken) },
+    });
+    return tokens;
   }
 
   async hashPassword(plain: string): Promise<string> {

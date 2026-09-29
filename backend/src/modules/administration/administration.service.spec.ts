@@ -26,6 +26,7 @@ describe('AdministrationService — CLAUDE.md §6.3 data-access boundary', () =>
     prisma = {
       estate: { create: jest.fn(), findMany: jest.fn() },
       residentProfile: { count: jest.fn().mockResolvedValue(0) },
+      building: { count: jest.fn().mockResolvedValue(0) },
       apartment: { count: jest.fn().mockResolvedValue(0) },
       securityOfficerProfile: { count: jest.fn().mockResolvedValue(0) },
       invitation: {
@@ -75,7 +76,7 @@ describe('AdministrationService — CLAUDE.md §6.3 data-access boundary', () =>
     it('returns only aggregate counts, never per-resident/per-visitor records', async () => {
       const result = await service.getOverview(estateAdmin(), undefined);
       expect(Object.keys(result).sort()).toEqual(
-        ['totalApartments', 'totalResidents', 'totalSecurityOfficers', 'visitorsToday'].sort(),
+        ['totalApartments', 'totalBuildings', 'totalResidents', 'totalSecurityOfficers', 'visitorsToday'].sort(),
       );
       // Every value must be a number (a count), never an array of records.
       Object.values(result).forEach((v) => expect(typeof v).toBe('number'));

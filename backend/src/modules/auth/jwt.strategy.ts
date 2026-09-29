@@ -65,7 +65,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (user.role === 'ESTATE_ADMIN') {
       return {
         ...base,
-        displayName: user.email ?? user.phone ?? 'Estate Admin',
+        displayName: user.displayName ?? user.email ?? user.phone ?? 'Estate Admin',
         estateId: user.adminEstateId ?? undefined,
       };
     }

@@ -44,6 +44,17 @@ enum EstateStatus {
   SUSPENDED
 }
 
+// Lifecycle of a self-service estate signup (see SignupService). A row
+// exists only between "form submitted" and "email verified" — no Estate
+// or User is created until VERIFIED, so an abandoned/fake signup leaves
+// nothing behind but an expiring row.
+enum PendingSignupStatus {
+  PENDING
+  VERIFIED
+  EXPIRED
+  SUPERSEDED
+}
+
 enum ApartmentStatus {
   OCCUPIED
   VACANT
@@ -95,6 +106,9 @@ model User {
   email            String?    @unique
   phone            String?    @unique
   passwordHash     String?
+  // Set for self-signup estate admins (their own name). Residents and
+  // officers keep their names on their profile rows.
+  displayName      String?
   externalAuthId   String?    @unique
   role             UserRole
   status           UserStatus @default(ACTIVE)
@@ -123,6 +137,11 @@ model Estate {
   id        String       @id @default(cuid())
   name      String
   address   String?
+  city      String?
+  state     String?
+  country   String?
+  // Public-facing contact for the estate office (not the admin's login).
+  contactPhone String?
   logoUrl   String?
   timezone  String       @default("UTC")
   status    EstateStatus @default(ACTIVE)
@@ -139,6 +158,38 @@ model Estate {
   auditLogs        AuditLog[]
   admins           User[]
   officerMessages  OfficerMessage[]
+}
+
+// ---------------------------------------------------------------------------
+// Self-service signup
+// ---------------------------------------------------------------------------
+
+model PendingSignup {
+  id           String              @id @default(cuid())
+  email        String
+  // Never store the raw token — only its SHA-256 (same rule as
+  // ResidentInvite.tokenHash). Unique so a collision can never resolve
+  // to the wrong signup.
+  tokenHash    String              @unique
+  // bcrypt hash chosen at signup; the plaintext password is never stored.
+  passwordHash String
+  adminName    String
+  adminPhone   String?
+  estateName   String
+  address      String
+  city         String
+  state        String
+  country      String
+  timezone     String
+  contactPhone String?
+  status       PendingSignupStatus @default(PENDING)
+  expiresAt    DateTime
+  verifiedAt   DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([email, status])
+  @@index([expiresAt])
 }
 
 // ---------------------------------------------------------------------------

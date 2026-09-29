@@ -36,8 +36,14 @@ and avoids a painful data migration if a second estate is ever added.
 `SUPER_ADMIN` exists in the role model for the same reason but has no UI
 built around it beyond the two endpoints needed to create an estate.
 
-**Do not build out a platform-level admin dashboard, estate self-signup
-flow, billing, or cross-estate reporting.** If/when this becomes a real
+> **Update 2026-09-29 — estate self-signup was added at the owner's
+> explicit request** (`backend/src/modules/signup`, frontend `/signup`).
+> Flow: form -> pending row -> emailed one-time link (24h, single-use)
+> -> Estate + ESTATE_ADMIN created and signed in. Still NOT built:
+> billing, a platform-level admin dashboard, cross-estate reporting.
+
+**Do not build out a platform-level admin dashboard, billing, or
+cross-estate reporting.** If/when this becomes a real
 multi-tenant product, that's a deliberate, separate project phase — flag
 it and discuss before starting it.
 

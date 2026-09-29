@@ -19,4 +19,24 @@ export class UpdateEstateDto {
   @IsOptional()
   @IsIanaTimezone()
   timezone?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  state?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  country?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  contactPhone?: string;
 }

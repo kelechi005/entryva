@@ -86,6 +86,9 @@ export function describeAuditLog(log: AdminAuditLog): Described {
     case 'RESIDENT_INVITE_COMPLETED':
       return { summary: 'A resident finished setting up their account' };
 
+    case 'ESTATE_SIGNUP_COMPLETED':
+      return { summary: 'Estate registered and activated' };
+
     case 'LOGIN':
       return { summary: 'Signed in' };
     case 'LOGIN_FAILED':

@@ -12,6 +12,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Field } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
+import { GettingStartedChecklist } from '@/components/admin/GettingStartedChecklist';
 import {
   UserIcon,
   BuildingIcon,
@@ -147,6 +148,8 @@ export default function AdminEstatePage() {
         />
       </div>
 
+      {overview && <GettingStartedChecklist overview={overview} />}
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr,320px]">
         <div className="flex flex-col gap-6">
           {settings && (
@@ -213,7 +216,9 @@ export default function AdminEstatePage() {
                     </dt>
                     <dd className="mt-1 text-sm font-medium text-ink">
                       {settings.address ? (
-                        settings.address
+                        [settings.address, settings.city, settings.state, settings.country]
+                          .filter(Boolean)
+                          .join(', ')
                       ) : (
                         <button onClick={startEditingSettings} className="text-brass underline">
                           Add an address

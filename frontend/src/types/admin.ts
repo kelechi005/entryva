@@ -45,6 +45,7 @@ export interface AdminAuditLog {
 
 export interface AdminOverview {
   totalResidents: number;
+  totalBuildings: number;
   totalApartments: number;
   totalSecurityOfficers: number;
   visitorsToday: number;
@@ -54,6 +55,10 @@ export interface AdminEstateSettings {
   id: string;
   name: string;
   address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  contactPhone?: string | null;
   timezone: string;
   status: 'ACTIVE' | 'SUSPENDED';
 }

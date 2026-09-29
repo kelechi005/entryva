@@ -15,7 +15,9 @@ timestamps don't need to be tracked here by hand.
 
 ## Unreleased
 
-_Nothing yet._
+- Estate self-signup: public `/signup` form (estate name, address, city, state, country, timezone, office phone, admin name/email/phone/password), email verification link, then the estate and its admin are created and signed in. Adds `PendingSignup` table, `Estate.city/state/country/contactPhone`, `User.displayName` (migration `20260929120000_estate_signup`).
+- Admin dashboard "Getting started" checklist; `/admin/overview` now includes `totalBuildings`.
+- Login email match is now case-insensitive.
 
 ## 2026-09-21 — Initial production release
 

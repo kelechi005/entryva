@@ -6,6 +6,7 @@
 // the two registers (warmth vs. operational) meeting at one edge.
 
 import { FormEvent, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Field } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
@@ -153,6 +154,13 @@ export default function LoginPage() {
                 {submitting ? 'Signing in\u2026' : 'Sign in'}
               </Button>
             </form>
+
+            <p className="mt-6 text-center text-sm text-ink-400">
+              Managing an estate?{' '}
+              <Link href="/signup" className="text-brass underline">
+                Register your estate
+              </Link>
+            </p>
           </div>
         </section>
       </div>
