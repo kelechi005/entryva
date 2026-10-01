@@ -15,6 +15,7 @@ import { apiFetch } from '@/lib/api-client';
 import { externalDirectionsUrl, formatDistance, formatDuration } from '@/lib/geo';
 import { getMapboxToken } from '@/lib/mapbox';
 import { useVisitorNavigation } from '@/hooks/useVisitorNavigation';
+import { VoiceGuidance } from '@/components/visitor/VoiceGuidance';
 import type { PublicEntrance } from '@/types/location';
 
 // mapbox-gl needs `window`, so it is only ever loaded in the browser, and
@@ -48,7 +49,15 @@ export function NavigateToEstate({ token, onShowPass }: Props) {
   }, [token]);
 
   if (!entrance) return null;
-  return <NavigationCard entrance={entrance} onShowPass={onShowPass} />;
+  return (
+    <>
+      <NavigationCard entrance={entrance} onShowPass={onShowPass} />
+      <VoiceGuidance
+        destination={{ lng: entrance.longitude, lat: entrance.latitude }}
+        gateName={entrance.gateName}
+      />
+    </>
+  );
 }
 
 function NavigationCard({ entrance, onShowPass }: { entrance: PublicEntrance; onShowPass: () => void }) {
