@@ -7,6 +7,8 @@ import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistratio
 // grotesque carries both the large greeting/number moments and the
 // operational UI (forms, tables, buttons), so nothing needs to switch
 // families across the app.
+const fraunces = inter;
+const plexSans = inter;
 
 export const metadata: Metadata = {
   title: 'Entryva',
@@ -24,7 +26,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${fraunces.variable} ${plexSans.variable}`}>
       <body className="ambient-glow min-h-screen font-body text-ink antialiased">
         <ServiceWorkerRegistration />
         {children}
