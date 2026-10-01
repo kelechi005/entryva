@@ -113,7 +113,8 @@ export default function MapView({
     // A finger drag or pinch means the visitor wants to look around.
     map.on('dragstart', () => cbRef.current.onUserMove?.());
     map.on('zoomstart', (e) => {
-      if (e.originalEvent) cbRef.current.onUserMove?.();
+      // Only a finger or wheel zoom counts, not the map's own animated zoom.
+      if ((e as unknown as { originalEvent?: unknown }).originalEvent) cbRef.current.onUserMove?.();
     });
 
     const markersMap = markerRefs.current;
@@ -189,7 +190,11 @@ export default function MapView({
       followedOnce.current = false;
       return;
     }
-    const opts: mapboxgl.EaseToOptions = { center: [followLng, followLat], duration: 1000, essential: true };
+    const opts: Parameters<mapboxgl.Map['easeTo']>[0] = {
+      center: [followLng, followLat],
+      duration: 1000,
+      essential: true,
+    };
     if (!followedOnce.current && followZoom !== undefined) opts.zoom = followZoom;
     map.easeTo(opts);
     followedOnce.current = true;
