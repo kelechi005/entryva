@@ -7,6 +7,8 @@
 //   2. Put the crosshair on the middle of the estate -> "Set estate pin here".
 //   3. Zoom right in on the visitor entrance -> "Set main gate here".
 //   4. Name the gate, optionally add a tip, Save.
+// Fastest way: open this page on a phone, stand at the gate and tap "Use my
+// location as the main gate" - the device's GPS fills it in, no map needed.
 // Pins can be dragged to fine-tune. If the map can't find the estate or
 // isn't available, the exact coordinates can be typed in instead.
 
@@ -16,6 +18,12 @@ import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { AlertIcon, CheckIcon, MapPinIcon, PencilIcon, SearchIcon, XIcon } from '@/components/ui/icons';
 import { apiFetch } from '@/lib/api-client';
+import {
+  DeviceLocationError,
+  MAX_ACCURACY_ESTATE_M,
+  MAX_ACCURACY_GATE_M,
+  getBestFix,
+} from '@/lib/device-location';
 import { getMapboxToken, searchPlaces, type PlaceResult } from '@/lib/mapbox';
 import type { EstateLocation, LatLng } from '@/types/location';
 
@@ -60,6 +68,11 @@ export function EstateLocationCard() {
   const [manual, setManual] = useState({ estLat: '', estLng: '', gateLat: '', gateLng: '' });
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // "Use my location" (this device's GPS) state.
+  const [locating, setLocating] = useState<'estate' | 'gate' | null>(null);
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  const [gpsNotice, setGpsNotice] = useState<{ tone: 'ok' | 'warn'; text: string } | null>(null);
 
   const hasMap = Boolean(getMapboxToken());
 
@@ -153,6 +166,54 @@ export function EstateLocationCard() {
       setGatePin({ lat: gateLat, lng: gateLng });
       setFlyTo({ lng: gateLng, lat: gateLat, zoom: 17 });
       setFlyKey((k) => k + 1);
+    }
+  }
+
+  // Fill a pin from this device's GPS. Refuses a rough reading rather than
+  // silently saving a pin that could send visitors to the wrong spot.
+  async function captureFromDevice(target: 'estate' | 'gate') {
+    setFormError(null);
+    setGpsNotice(null);
+    setGpsAccuracy(null);
+    setLocating(target);
+    const limit = target === 'gate' ? MAX_ACCURACY_GATE_M : MAX_ACCURACY_ESTATE_M;
+    const label = target === 'gate' ? 'main gate' : 'estate pin';
+    try {
+      const fix = await getBestFix({ onProgress: setGpsAccuracy });
+      const rounded = Math.round(fix.accuracyM);
+      if (fix.accuracyM > limit) {
+        setGpsNotice({
+          tone: 'warn',
+          text:
+            `Your device could only find you to within about ${rounded} m, which isn't accurate enough for the ${label} ` +
+            `(it needs ${limit} m or better). Step outside into the open, wait a few seconds and try again` +
+            `${hasMap ? ', or place the pin on the map' : ', or type the coordinates below'}.`,
+        });
+        return;
+      }
+      const point = { lat: fix.lat, lng: fix.lng };
+      if (target === 'gate') setGatePin(point);
+      else setEstatePin(point);
+      setFlyTo({ lng: fix.lng, lat: fix.lat, zoom: 18 });
+      setFlyKey((k) => k + 1);
+      setGpsNotice({
+        tone: 'ok',
+        text: `The ${label} is now set to where you're standing (accurate to about ${rounded} m).`,
+      });
+    } catch (err) {
+      const kind = err instanceof DeviceLocationError ? err.kind : 'unavailable';
+      setGpsNotice({
+        tone: 'warn',
+        text:
+          kind === 'denied'
+            ? 'Location is blocked for this site. Allow location access in your browser or phone settings, then try again.'
+            : kind === 'unsupported'
+              ? "This browser can't share its location. Use a phone, or place the pin another way."
+              : "Couldn't get a GPS reading. Step outside into the open and try again.",
+      });
+    } finally {
+      setLocating(null);
+      setGpsAccuracy(null);
     }
   }
 
@@ -252,6 +313,62 @@ export function EstateLocationCard() {
       {/* ---- Editor ---- */}
       {editing && (
         <form onSubmit={save} className="mt-5 flex flex-col gap-5">
+          <div className="flex flex-col gap-3 rounded-2xl border border-ink-100 p-4">
+            <div>
+              <p className="text-sm font-medium text-ink">Let this device find the spot</p>
+              <p className="mt-0.5 text-xs text-ink-400">
+                Open this page on your phone, stand in the gateway (outdoors, clear sky) and tap the button. No map or
+                typing needed.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={locating !== null}
+                onClick={() => void captureFromDevice('gate')}
+              >
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: GATE_COLOR }} />
+                {locating === 'gate' ? 'Finding your location\u2026' : 'Use my location as the main gate'}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={locating !== null}
+                onClick={() => void captureFromDevice('estate')}
+              >
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: ESTATE_COLOR }} />
+                {locating === 'estate' ? 'Finding your location\u2026' : 'Use my location as the estate pin'}
+              </Button>
+            </div>
+            {locating !== null && (
+              <p className="text-xs text-ink-400" aria-live="polite">
+                Waiting for a good GPS signal
+                {gpsAccuracy !== null ? ` \u2014 currently accurate to about ${Math.round(gpsAccuracy)} m` : ''}
+                &hellip;
+              </p>
+            )}
+            {gpsNotice && (
+              <p
+                role="status"
+                className={`rounded-lg px-3 py-2 text-sm ${
+                  gpsNotice.tone === 'ok' ? 'bg-verified-50 text-verified' : 'bg-warn-50 text-warn'
+                }`}
+              >
+                {gpsNotice.text}
+              </p>
+            )}
+            {gatePin && !estatePin && (
+              <button
+                type="button"
+                onClick={() => setEstatePin(gatePin)}
+                className="self-start text-sm text-brass underline"
+              >
+                Use the gate position for the estate pin too
+              </button>
+            )}
+          </div>
+
           {hasMap ? (
             <>
               <div className="flex flex-col gap-2">
