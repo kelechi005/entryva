@@ -16,6 +16,9 @@ export interface MapMarker {
   lat: number;
   color: string;
   draggable?: boolean;
+  /** 'car' draws a car that points the way `heading` (degrees, 0 = north). */
+  icon?: 'car';
+  heading?: number;
 }
 
 interface MapViewProps {
@@ -146,8 +149,13 @@ export default function MapView({
       const current = existing.get(m.id);
       if (current) {
         current.setLngLat([m.lng, m.lat]);
+        if (m.icon === 'car') current.setRotation(m.heading ?? 0);
       } else {
-        const marker = new mapboxgl.Marker({ color: m.color, draggable: Boolean(m.draggable) })
+        const marker = (
+          m.icon === 'car'
+            ? new mapboxgl.Marker({ element: carElement(m.color), rotation: m.heading ?? 0, rotationAlignment: 'map' })
+            : new mapboxgl.Marker({ color: m.color, draggable: Boolean(m.draggable) })
+        )
           .setLngLat([m.lng, m.lat])
           .addTo(map);
         if (m.draggable) {
@@ -209,6 +217,21 @@ export default function MapView({
   }, [flyKey]);
 
   return <div ref={containerRef} className={`overflow-hidden rounded-2xl ${className}`} />;
+}
+
+// A top-down car that points up (north); the marker rotation turns it.
+function carElement(color: string): HTMLElement {
+  const el = document.createElement('div');
+  el.style.width = '34px';
+  el.style.height = '34px';
+  el.innerHTML =
+    '<svg viewBox="0 0 24 24" width="34" height="34" xmlns="http://www.w3.org/2000/svg">' +
+    '<circle cx="12" cy="12" r="11" fill="white" opacity="0.92"/>' +
+    '<rect x="7.5" y="3.5" width="9" height="17" rx="3.5" fill="' + color + '"/>' +
+    '<rect x="9" y="6.5" width="6" height="3.5" rx="1" fill="white" opacity="0.9"/>' +
+    '<rect x="9" y="15" width="6" height="2.5" rx="1" fill="white" opacity="0.6"/>' +
+    '</svg>';
+  return el;
 }
 
 function applyRoute(map: mapboxgl.Map, route: Array<[number, number]> | null | undefined) {

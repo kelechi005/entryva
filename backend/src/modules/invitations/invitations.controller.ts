@@ -15,6 +15,8 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/auth.types';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { getLiveForResident } from '../live-location/live-location';
 
 function toResidentContext(user: AuthenticatedUser): ResidentContext {
   // Guarded by @Roles('RESIDENT') below, so these fields are always
@@ -32,7 +34,10 @@ function toResidentContext(user: AuthenticatedUser): ResidentContext {
 @Roles('RESIDENT')
 @Controller('invitations')
 export class InvitationsController {
-  constructor(private readonly invitationsService: InvitationsService) {}
+  constructor(
+    private readonly invitationsService: InvitationsService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Post()
   async create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateInvitationDto) {
@@ -47,6 +52,12 @@ export class InvitationsController {
   @Get('overview')
   async overview(@CurrentUser() user: AuthenticatedUser) {
     return this.invitationsService.getResidentOverview(toResidentContext(user));
+  }
+
+  // Where is my visitor right now? Only the resident who made the invitation.
+  @Get(':id/live-location')
+  async liveLocation(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return getLiveForResident(this.prisma, id, toResidentContext(user).residentId);
   }
 
   @Delete(':id')

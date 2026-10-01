@@ -4,6 +4,7 @@
 // premium glass rows (dense table feel on desktop, stacked cards on
 // mobile) rather than the plain bordered list this used to be.
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, toStatusBadgeKey } from '@/components/ui/StatusBadge';
@@ -138,14 +139,21 @@ export default function VisitorHistoryPage() {
                 </div>
 
                 {canRevoke && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => handleRevoke(invitation.id)}
-                    disabled={revokingId === invitation.id}
-                    className="self-start sm:self-auto"
-                  >
-                    {revokingId === invitation.id ? 'Revoking\u2026' : 'Revoke'}
-                  </Button>
+                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <Link
+                      href={`/visitors/track/${invitation.id}`}
+                      className="rounded-pill px-4 py-2 text-sm font-medium text-brass underline"
+                    >
+                      Track arrival
+                    </Link>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleRevoke(invitation.id)}
+                      disabled={revokingId === invitation.id}
+                    >
+                      {revokingId === invitation.id ? 'Revoking\u2026' : 'Revoke'}
+                    </Button>
+                  </div>
                 )}
               </li>
             );

@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "Invitation" ADD COLUMN     "liveAccuracyM" DOUBLE PRECISION,
+ADD COLUMN     "liveArrivedAt" TIMESTAMP(3),
+ADD COLUMN     "liveHeading" DOUBLE PRECISION,
+ADD COLUMN     "liveLat" DOUBLE PRECISION,
+ADD COLUMN     "liveLng" DOUBLE PRECISION,
+ADD COLUMN     "liveUpdatedAt" TIMESTAMP(3);

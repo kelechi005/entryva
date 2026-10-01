@@ -362,6 +362,15 @@ model Invitation {
   revokedAt  DateTime?
   usedAt     DateTime?
 
+  // Live arrival tracking. Only the LATEST point, shared by the visitor on
+  // purpose; cleared on stop, arrival or expiry. Never a location history.
+  liveLat       Float?
+  liveLng       Float?
+  liveHeading   Float?
+  liveAccuracyM Float?
+  liveUpdatedAt DateTime?
+  liveArrivedAt DateTime?
+
   events             InvitationEvent[]
   verificationEvents VerificationEvent[]
   visits             Visit[]

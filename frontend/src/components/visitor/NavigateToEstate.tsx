@@ -16,6 +16,7 @@ import { externalDirectionsUrl, formatDistance, formatDuration } from '@/lib/geo
 import { getMapboxToken } from '@/lib/mapbox';
 import { useVisitorNavigation } from '@/hooks/useVisitorNavigation';
 import { VoiceGuidance } from '@/components/visitor/VoiceGuidance';
+import { ShareLiveLocation } from '@/components/visitor/ShareLiveLocation';
 import type { PublicEntrance } from '@/types/location';
 
 // mapbox-gl needs `window`, so it is only ever loaded in the browser, and
@@ -49,13 +50,21 @@ export function NavigateToEstate({ token, onShowPass }: Props) {
   }, [token]);
 
   if (!entrance) return null;
-  return <NavigationWithVoice entrance={entrance} onShowPass={onShowPass} />;
+  return <NavigationWithVoice entrance={entrance} onShowPass={onShowPass} token={token} />;
 }
 
 type VisitorNav = ReturnType<typeof useVisitorNavigation>;
 
 // One GPS feed drives the map, the distance and the spoken directions.
-function NavigationWithVoice({ entrance, onShowPass }: { entrance: PublicEntrance; onShowPass: () => void }) {
+function NavigationWithVoice({
+  entrance,
+  onShowPass,
+  token,
+}: {
+  entrance: PublicEntrance;
+  onShowPass: () => void;
+  token: string;
+}) {
   const nav = useVisitorNavigation(entrance);
   return (
     <>
@@ -67,6 +76,7 @@ function NavigationWithVoice({ entrance, onShowPass }: { entrance: PublicEntranc
         navPhase={nav.phase}
         onStart={nav.start}
       />
+      <ShareLiveLocation token={token} position={nav.position} navPhase={nav.phase} onStart={nav.start} />
     </>
   );
 }
