@@ -49,21 +49,44 @@ export function NavigateToEstate({ token, onShowPass }: Props) {
   }, [token]);
 
   if (!entrance) return null;
+  return <NavigationWithVoice entrance={entrance} onShowPass={onShowPass} />;
+}
+
+type VisitorNav = ReturnType<typeof useVisitorNavigation>;
+
+// One GPS feed drives the map, the distance and the spoken directions.
+function NavigationWithVoice({ entrance, onShowPass }: { entrance: PublicEntrance; onShowPass: () => void }) {
+  const nav = useVisitorNavigation(entrance);
   return (
     <>
-      <NavigationCard entrance={entrance} onShowPass={onShowPass} />
+      <NavigationCard entrance={entrance} onShowPass={onShowPass} nav={nav} />
       <VoiceGuidance
         destination={{ lng: entrance.longitude, lat: entrance.latitude }}
         gateName={entrance.gateName}
+        position={nav.position}
+        navPhase={nav.phase}
+        onStart={nav.start}
       />
     </>
   );
 }
 
-function NavigationCard({ entrance, onShowPass }: { entrance: PublicEntrance; onShowPass: () => void }) {
-  const nav = useVisitorNavigation(entrance);
+function NavigationCard({
+  entrance,
+  onShowPass,
+  nav,
+}: {
+  entrance: PublicEntrance;
+  onShowPass: () => void;
+  nav: VisitorNav;
+}) {
   const hasMapToken = Boolean(getMapboxToken());
   const externalUrl = externalDirectionsUrl(nav.gate);
+  // The map follows the visitor as they move, until they drag it themselves.
+  const [following, setFollowing] = useState(true);
+  useEffect(() => {
+    if (nav.phase === 'locating') setFollowing(true);
+  }, [nav.phase]);
 
   const markers = useMemo(() => {
     const list = [{ id: 'gate', lng: nav.gate.lng, lat: nav.gate.lat, color: '#22C55E' }];
@@ -191,10 +214,18 @@ function NavigationCard({ entrance, onShowPass }: { entrance: PublicEntrance; on
           zoom={15}
           markers={markers}
           route={nav.route?.coordinates ?? null}
-          fitTo={fitTo}
+          fitTo={following ? undefined : fitTo}
           fitKey={`${nav.route ? 'route' : 'fix'}`}
+          follow={following && nav.position ? [nav.position.lng, nav.position.lat] : null}
+          followZoom={17}
+          onUserMove={() => setFollowing(false)}
           className="h-64 w-full"
         />
+      )}
+      {hasMapToken && nav.position && !following && (
+        <Button fullWidth variant="secondary" onClick={() => setFollowing(true)}>
+          Recentre on me
+        </Button>
       )}
 
       {nav.routeLoading && <p className="text-sm text-ink-400">Loading route&hellip;</p>}

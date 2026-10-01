@@ -34,6 +34,12 @@ interface MapViewProps {
   /** Fires when the user stops moving the map; gives the middle of the screen. */
   onCenterChange?: (center: { lng: number; lat: number }) => void;
   onMarkerDragEnd?: (id: string, pos: { lng: number; lat: number }) => void;
+  /** Keep the camera on this [lng, lat] as it changes (e.g. a moving visitor). */
+  follow?: [number, number] | null;
+  /** Zoom level to use when following starts. */
+  followZoom?: number;
+  /** Fires when the user drags or pinches the map themselves. */
+  onUserMove?: () => void;
   className?: string;
 }
 
@@ -52,6 +58,9 @@ export default function MapView({
   satellite,
   onCenterChange,
   onMarkerDragEnd,
+  follow,
+  followZoom,
+  onUserMove,
   className = 'h-72 w-full',
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -59,8 +68,9 @@ export default function MapView({
   const loadedRef = useRef(false);
   const markerRefs = useRef<Map<string, mapboxgl.Marker>>(new Map());
   // Latest callbacks/props in refs so the map is created exactly once.
-  const cbRef = useRef({ onCenterChange, onMarkerDragEnd });
-  cbRef.current = { onCenterChange, onMarkerDragEnd };
+  const cbRef = useRef({ onCenterChange, onMarkerDragEnd, onUserMove });
+  cbRef.current = { onCenterChange, onMarkerDragEnd, onUserMove };
+  const followedOnce = useRef(false);
   const routeRef = useRef(route);
   routeRef.current = route;
 
@@ -99,6 +109,11 @@ export default function MapView({
     map.on('moveend', () => {
       const c = map.getCenter();
       cbRef.current.onCenterChange?.({ lng: c.lng, lat: c.lat });
+    });
+    // A finger drag or pinch means the visitor wants to look around.
+    map.on('dragstart', () => cbRef.current.onUserMove?.());
+    map.on('zoomstart', (e) => {
+      if (e.originalEvent) cbRef.current.onUserMove?.();
     });
 
     const markersMap = markerRefs.current;
@@ -164,6 +179,21 @@ export default function MapView({
     map.fitBounds(bounds, { padding: 60, maxZoom: 17, duration: 600 });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when fitKey changes
   }, [fitKey]);
+
+  // Follow a moving point (the visitor) smoothly.
+  const followLng = follow ? follow[0] : null;
+  const followLat = follow ? follow[1] : null;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || followLng === null || followLat === null) {
+      followedOnce.current = false;
+      return;
+    }
+    const opts: mapboxgl.EaseToOptions = { center: [followLng, followLat], duration: 1000, essential: true };
+    if (!followedOnce.current && followZoom !== undefined) opts.zoom = followZoom;
+    map.easeTo(opts);
+    followedOnce.current = true;
+  }, [followLng, followLat, followZoom]);
 
   // Fly to a searched place.
   useEffect(() => {

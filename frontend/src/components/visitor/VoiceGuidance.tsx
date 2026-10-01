@@ -1,12 +1,14 @@
 'use client';
 
 // Spoken turn-by-turn directions for a visitor driving to the estate gate.
-// Uses the visitor's live GPS (it never leaves their phone except to Mapbox
-// for the route) and the phone's built-in voice. Speech can only start after
-// a tap, so the visitor presses "Start voice guidance".
+// It does NOT run its own GPS: it listens to the same position feed that
+// moves the dot on the map (from useVisitorNavigation), so the map, the
+// distance and the voice always agree. Speech can only start after a tap, so
+// the visitor presses "Start voice guidance".
 
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import type { NavPhase, VisitorPosition } from '@/hooks/useVisitorNavigation';
 import { getMapboxToken } from '@/lib/mapbox';
 import {
   ARRIVED_WITHIN_M,
@@ -25,9 +27,14 @@ import {
 interface Props {
   destination: LngLat;
   gateName: string;
+  /** Live position from the shared navigation feed (null until the first fix). */
+  position: VisitorPosition | null;
+  navPhase: NavPhase;
+  /** Starts the shared GPS feed (and the map) if it isn't running yet. */
+  onStart: () => void;
 }
 
-export function VoiceGuidance({ destination, gateName }: Props) {
+export function VoiceGuidance({ destination, gateName, position, navPhase, onStart }: Props) {
   const [active, setActive] = useState(false);
   const [muted, setMuted] = useState(false);
   const [arrived, setArrived] = useState(false);
@@ -40,7 +47,6 @@ export function VoiceGuidance({ destination, gateName }: Props) {
   const routeRef = useRef<GuidanceRoute | null>(null);
   const stepRef = useRef(0);
   const spokenRef = useRef<Set<string>>(new Set());
-  const watchRef = useRef<number | null>(null);
   const wakeRef = useRef<WakeLockLike | null>(null);
   const offCountRef = useRef(0);
   const fetchingRef = useRef(false);
@@ -58,8 +64,6 @@ export function VoiceGuidance({ destination, gateName }: Props) {
   }
 
   function stop(cancelSpeech = true) {
-    if (watchRef.current !== null) navigator.geolocation.clearWatch(watchRef.current);
-    watchRef.current = null;
     if (cancelSpeech && 'speechSynthesis' in window) window.speechSynthesis.cancel();
     void wakeRef.current?.release().catch(() => undefined);
     wakeRef.current = null;
@@ -92,9 +96,7 @@ export function VoiceGuidance({ destination, gateName }: Props) {
 
   function handleFix(pos: LngLat) {
     if (haversineM(pos, destRef.current) <= ARRIVED_WITHIN_M) {
-      speak(`You have arrived at ${nameRef.current}.`);
-      setArrived(true);
-      stop(false);
+      arrive();
       return;
     }
 
@@ -124,33 +126,27 @@ export function VoiceGuidance({ destination, gateName }: Props) {
     }
   }
 
+  function arrive() {
+    speak(`You have arrived at ${nameRef.current}.`);
+    setArrived(true);
+    stop(false);
+  }
+
   function start() {
     setError(null);
     setArrived(false);
-    if (!('geolocation' in navigator)) {
-      setError('This phone cannot share its location.');
-      return;
-    }
     // Speaking inside the tap unlocks audio on phones.
     speak('Voice guidance on.');
-    setActive(true);
     routeRef.current = null;
     stepRef.current = 0;
     spokenRef.current = new Set();
     offCountRef.current = 0;
+    setActive(true);
     void acquireWakeLock().then((lock) => {
       wakeRef.current = lock;
     });
-    watchRef.current = navigator.geolocation.watchPosition(
-      (p) => handleFix({ lng: p.coords.longitude, lat: p.coords.latitude }),
-      (e) => {
-        if (e.code === 1) {
-          setError('Location is blocked for this site. Allow location access in your phone settings, then try again.');
-          stop();
-        }
-      },
-      { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 },
-    );
+    // Turn on the shared GPS feed (and the map) if the visitor hasn't already.
+    if (navPhase === 'idle' || navPhase === 'arrived') onStart();
   }
 
   function toggleMute() {
@@ -159,6 +155,25 @@ export function VoiceGuidance({ destination, gateName }: Props) {
     setMuted(next);
     if (next && 'speechSynthesis' in window) window.speechSynthesis.cancel();
   }
+
+  // Every new position from the shared feed drives the guidance.
+  useEffect(() => {
+    if (!active || !position || position.accuracyM > 100) return;
+    handleFix({ lng: position.lng, lat: position.lat });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleFix only reads refs
+  }, [position, active]);
+
+  // Shared feed stopped (visitor pressed Stop, or location was refused).
+  useEffect(() => {
+    if (active && navPhase === 'idle') stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to the phase
+  }, [active, navPhase]);
+
+  // The map's own arrival check can fire first; still say it out loud.
+  useEffect(() => {
+    if (active && navPhase === 'arrived') arrive();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to the phase
+  }, [active, navPhase]);
 
   const stopRef = useRef(stop);
   stopRef.current = stop;
