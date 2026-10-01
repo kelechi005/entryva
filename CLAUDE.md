@@ -245,6 +245,42 @@ simple "which device is this" tag might cover it).
 
 ---
 
+## 7.1 Estate Location and Visitor Navigation (added 2026-09-30, owner request)
+
+The owner asked for visitor navigation to the estate (ENTRYVA.md). This
+does NOT bring back the `Gate` model cut in §7 - that was about assigning
+officers to gates. This feature only needs to know *where visitors should
+drive to*, so it is a handful of nullable columns on `Estate`:
+`latitude/longitude` (estate pin), `mainGateName/mainGateLatitude/
+mainGateLongitude` (the visitor entrance), `entranceInstructions`,
+`arrivalRadiusMeters` (default 100). One entrance only; a second entrance,
+or routing by visitor type, is a new decision (see §7 for how to re-derive
+it).
+
+- Admin sets it on the Estate page (`EstateLocationCard`) by panning a
+  satellite map and pressing "Set ... here" (or typing coordinates). The
+  coordinates saved are the ones the admin placed - Mapbox search is used
+  only to move the map (Mapbox search results may not be stored).
+  `PUT /admin/estate/location`, ESTATE_ADMIN scoped server-side to their
+  own estate (§11), audited as `ADMIN_CHANGED_ESTATE`.
+- Visitor: `GET /invitations/public/:token/location` returns ONLY the gate
+  (name, coordinates, tip, arrival radius) and only while the invitation is
+  ACTIVE/PENDING and in its window. No estate-centre pin, no resident or
+  visitor data (§6).
+- The visitor's GPS position stays in their browser. Arrival is decided
+  on-device (`lib/geo.ts`: within the radius, accuracy <= 100 m, two
+  readings in a row). It is never sent to our server, so admins and
+  residents gain no way to track visitors (§6.1).
+- Mapbox is called from the browser with a PUBLIC (`pk.`) token, restricted
+  to the production domain in the Mapbox dashboard. One route request per
+  tap - no polling. A secret (`sk.`) token must never be used here.
+- Build-time variable: `NEXT_PUBLIC_MAPBOX_TOKEN` (GitHub variable
+  `MAPBOX_PUBLIC_TOKEN`, passed as a Docker build arg like
+  `NEXT_PUBLIC_API_BASE_URL`). If missing, the admin can still type
+  coordinates and visitors still get the gate details and a Google Maps link.
+
+---
+
 ## 8. No In-App Calling
 
 An earlier version of this plan specified full WebRTC calling

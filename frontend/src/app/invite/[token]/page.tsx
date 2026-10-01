@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { InvitationTicket } from '@/components/visitor/InvitationTicket';
+import { NavigateToEstate } from '@/components/visitor/NavigateToEstate';
 import { StatusBadge, toStatusBadgeKey } from '@/components/ui/StatusBadge';
 import { ClockIcon } from '@/components/ui/icons';
 import { apiFetch } from '@/lib/api-client';
@@ -85,10 +86,21 @@ export default function VisitorInvitePage({ params }: { params: { token: string 
       )}
 
       {state.status === 'ready' && LIVE_STATUSES.has(state.invitation.status) && (
-        <InvitationTicket
-          invitation={state.invitation}
-          qrValue={window.location.href}
+        <NavigateToEstate
+          token={params.token}
+          onShowPass={() =>
+            document.getElementById('visitor-pass')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }
         />
+      )}
+
+      {state.status === 'ready' && LIVE_STATUSES.has(state.invitation.status) && (
+        <div id="visitor-pass">
+          <InvitationTicket
+            invitation={state.invitation}
+            qrValue={window.location.href}
+          />
+        </div>
       )}
 
       {state.status === 'ready' && LIVE_STATUSES.has(state.invitation.status) && (

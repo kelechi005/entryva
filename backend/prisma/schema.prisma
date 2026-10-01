@@ -134,6 +134,17 @@ model User {
 }
 
 model Estate {
+  // --- Location & navigation (see EstateLocationService) ---
+  // The estate pin and the main gate are deliberately separate points:
+  // visitors are routed to the gate, never to the estate centre. No
+  // Gate table (CLAUDE.md section 7) - one main entrance, stored here.
+  latitude             Float?
+  longitude            Float?
+  mainGateName         String?
+  mainGateLatitude     Float?
+  mainGateLongitude    Float?
+  entranceInstructions String?
+  arrivalRadiusMeters  Int     @default(100)
   id        String       @id @default(cuid())
   name      String
   address   String?

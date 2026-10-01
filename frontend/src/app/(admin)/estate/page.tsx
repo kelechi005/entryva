@@ -26,6 +26,7 @@ import {
   CheckIcon,
   XIcon,
 } from '@/components/ui/icons';
+import { EstateLocationCard } from '@/components/location/EstateLocationCard';
 import { apiFetch } from '@/lib/api-client';
 import { describeAuditLog } from '@/lib/audit-log-descriptions';
 import type { AdminAuditLog, AdminEstateSettings, AdminOverview } from '@/types/admin';
@@ -152,6 +153,8 @@ export default function AdminEstatePage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr,320px]">
         <div className="flex flex-col gap-6">
+          <EstateLocationCard />
+
           {settings && (
             <div className="glass-card rounded-card p-5 sm:p-6">
               <div className="flex items-center justify-between">

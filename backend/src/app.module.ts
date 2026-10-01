@@ -18,6 +18,7 @@ import { AdministrationModule } from './modules/administration/administration.mo
 import { ResidentInvitesModule } from './modules/resident-invites/resident-invites.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { HealthModule } from './modules/health/health.module';
+import { EstateLocationModule } from './modules/estate-location/estate-location.module';
 import { MessagesModule } from './modules/messages/messages.module';
 import { SignupModule } from './modules/signup/signup.module';
 
@@ -46,6 +47,7 @@ import { SignupModule } from './modules/signup/signup.module';
     ResidentInvitesModule,
     RealtimeModule,
     HealthModule,
+    EstateLocationModule,
     MessagesModule,
     SignupModule,
   ],

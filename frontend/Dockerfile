@@ -23,6 +23,10 @@ FROM base AS build
 # `docker build` still works untouched for local testing.
 ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:4000/api
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+# Public Mapbox token (starts with pk.) for visitor navigation. Build-time
+# for the same reason as the API URL above. Empty = map features off.
+ARG NEXT_PUBLIC_MAPBOX_TOKEN=
+ENV NEXT_PUBLIC_MAPBOX_TOKEN=$NEXT_PUBLIC_MAPBOX_TOKEN
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
