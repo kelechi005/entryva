@@ -143,7 +143,7 @@ export default function ResidentDashboardPage() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <QuickAction href="/visitors/history" label="Visitor History" icon={VisitorsIcon} />
             <QuickAction href="/visitors/new" label="Invite Again" icon={PlusIcon} />
-            <QuickAction href="/visitors/history" label="Notifications" icon={BellIcon} />
+            <QuickAction href="/notifications" label="Notifications" icon={BellIcon} />
             <QuickAction href="/visitors/history" label="Security" icon={ShieldIcon} />
           </div>
 

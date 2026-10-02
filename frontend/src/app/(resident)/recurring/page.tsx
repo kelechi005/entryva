@@ -6,6 +6,7 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
+import { TimeField } from '@/components/ui/TimeField';
 import { apiFetch } from '@/lib/api-client';
 import { hhmmToMinutes, minutesToHHMM } from '@/lib/time-of-day';
 import {
@@ -127,8 +128,8 @@ function CreateForm({ onCreated, onCancel }: { onCreated: (p: CreatedRecurringPa
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="From" type="time" value={start} onChange={(e) => setStart(e.target.value)} />
-        <Field label="Until" type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
+        <TimeField label="From" value={start} onChange={setStart} />
+        <TimeField label="Until" value={end} onChange={setEnd} />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <Field label="Pass starts" type="date" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />

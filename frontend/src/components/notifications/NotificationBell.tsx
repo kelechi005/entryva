@@ -27,7 +27,7 @@ const NOTIFICATION_COPY: Record<NotificationType, (payload: Record<string, unkno
     `${(p?.visitorName as string) ?? 'Your regular visitor'} is still marked inside past their allowed hours.`,
 };
 
-function describe(notification: AppNotification): string {
+export function describe(notification: AppNotification): string {
   const describer = NOTIFICATION_COPY[notification.type];
   return describer ? describer(notification.payload) : notification.type;
 }

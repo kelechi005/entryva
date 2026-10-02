@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { Field } from '@/components/ui/Field';
+import { TimeField } from '@/components/ui/TimeField';
 import { Button } from '@/components/ui/Button';
 import type { CreateInvitationInput } from '@/types/invitation';
 
@@ -107,18 +108,16 @@ export function CreateVisitorForm({ onSubmit, initial }: CreateVisitorFormProps)
           onChange={(e) => update('visitDate', e.target.value)}
           error={errors.visitDate}
         />
-        <Field
+        <TimeField
           label="Start time"
-          type="time"
           value={form.startTime}
-          onChange={(e) => update('startTime', e.target.value)}
+          onChange={(v) => update('startTime', v)}
           error={errors.startTime}
         />
-        <Field
+        <TimeField
           label="End time"
-          type="time"
           value={form.endTime}
-          onChange={(e) => update('endTime', e.target.value)}
+          onChange={(v) => update('endTime', v)}
           error={errors.endTime}
         />
       </div>

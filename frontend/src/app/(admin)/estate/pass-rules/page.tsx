@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
+import { TimeField } from '@/components/ui/TimeField';
 import { apiFetch } from '@/lib/api-client';
 import { hhmmToMinutes, minutesToHHMM } from '@/lib/time-of-day';
 
@@ -172,8 +173,8 @@ export default function PassRulesPage() {
           </label>
           {quietOn && (
             <div className="grid grid-cols-2 gap-4">
-              <Field label="From" type="time" value={quietFrom} onChange={(e) => setQuietFrom(e.target.value)} />
-              <Field label="Until" type="time" value={quietTo} onChange={(e) => setQuietTo(e.target.value)} />
+              <TimeField label="From" value={quietFrom} onChange={setQuietFrom} />
+              <TimeField label="Until" value={quietTo} onChange={setQuietTo} />
             </div>
           )}
           {quietOn && (
