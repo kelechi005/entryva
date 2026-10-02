@@ -1,12 +1,14 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { Field } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import type { CreateInvitationInput } from '@/types/invitation';
 
 interface CreateVisitorFormProps {
   onSubmit: (input: CreateInvitationInput) => Promise<void>;
+  /** Fills in the visitor when the resident picks someone to invite again. */
+  initial?: { visitorName?: string; visitorPhone?: string };
 }
 
 const emptyForm: CreateInvitationInput = {
@@ -18,11 +20,21 @@ const emptyForm: CreateInvitationInput = {
   notes: '',
 };
 
-export function CreateVisitorForm({ onSubmit }: CreateVisitorFormProps) {
+export function CreateVisitorForm({ onSubmit, initial }: CreateVisitorFormProps) {
   const [form, setForm] = useState<CreateInvitationInput>(emptyForm);
   const [errors, setErrors] = useState<Partial<Record<keyof CreateInvitationInput, string>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Picking a past visitor fills in their name and phone and keeps the date and times.
+  useEffect(() => {
+    if (!initial) return;
+    setForm((prev) => ({
+      ...prev,
+      visitorName: initial.visitorName ?? prev.visitorName,
+      visitorPhone: initial.visitorPhone ?? prev.visitorPhone,
+    }));
+  }, [initial]);
 
   function update<K extends keyof CreateInvitationInput>(key: K, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));

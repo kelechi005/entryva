@@ -135,6 +135,12 @@ export default function VisitorHistoryPage() {
                       Created {formatShortDate(invitation.createdAt)}
                       {invitation.entryPolicy === 'ONE_TIME' ? ' · One-time entry' : ' · Multi-entry'}
                     </p>
+                    <Link
+                      href={`/visitors/new?name=${encodeURIComponent(invitation.visitorName)}&phone=${encodeURIComponent(invitation.visitorPhone ?? '')}`}
+                      className="mt-1 inline-block text-xs font-medium text-brass hover:underline"
+                    >
+                      Invite again
+                    </Link>
                   </div>
                 </div>
 
