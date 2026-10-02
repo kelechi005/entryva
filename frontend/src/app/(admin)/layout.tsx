@@ -25,8 +25,20 @@ const NAV_ITEMS = [
   { href: '/properties', label: 'Buildings & Apartments', icon: BuildingIcon },
   { href: '/residents', label: 'Residents', icon: UserIcon },
   { href: '/security-officers', label: 'Security Officers', icon: ShieldIcon },
+  { href: '/estate/pass-rules', label: 'Pass Rules', icon: ClockIcon },
   { href: '/audit-logs', label: 'Audit Logs', icon: ClockIcon },
 ];
+
+// The longest matching path wins, so /estate/pass-rules highlights
+// "Pass Rules" and not "Dashboard" (/estate).
+function activeNavHref(pathname: string | null): string | undefined {
+  if (!pathname) return undefined;
+  let best: string | undefined;
+  for (const item of NAV_ITEMS) {
+    if (pathname.startsWith(item.href) && (!best || item.href.length > best.length)) best = item.href;
+  }
+  return best;
+}
 
 function Logo() {
   return (
@@ -43,7 +55,7 @@ function NavLinks({ pathname, onNavigate }: { pathname: string | null; onNavigat
   return (
     <>
       {NAV_ITEMS.map((item) => {
-        const active = pathname?.startsWith(item.href);
+        const active = item.href === activeNavHref(pathname);
         const Icon = item.icon;
         return (
           <Link
@@ -91,7 +103,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return () => mql.removeEventListener('change', onChange);
   }, []);
 
-  const activeLabel = NAV_ITEMS.find((item) => pathname?.startsWith(item.href))?.label ?? 'Admin';
+  const activeLabel = NAV_ITEMS.find((item) => item.href === activeNavHref(pathname))?.label ?? 'Admin';
 
   return (
     <div className="min-h-screen ambient-glow lg:flex">
