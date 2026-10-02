@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { apiFetch } from '@/lib/api-client';
 import { frequentVisitors, type FrequentVisitor } from '@/lib/frequent-visitors';
 import { buildSmsUrl, buildWhatsAppUrl } from '@/lib/share-pass';
+import { getPass, markClosed, markOpen, reopenablePass, savePass } from '@/lib/pass-cache';
 import { CheckCircleIcon, ShareIcon, CopyIcon } from '@/components/ui/icons';
 import type { CreateInvitationInput, CreatedInvitation, InvitationHistoryItem } from '@/types/invitation';
 
@@ -70,6 +71,31 @@ export default function CreateVisitorPage() {
     handleCopyLink();
   }
 
+  // Remember each new pass on this device, so its link can be shown again.
+  useEffect(() => {
+    if (created) {
+      savePass(created);
+      markOpen(created.id);
+    }
+  }, [created]);
+
+  // Came back by mistake, or tapped "Share link" in Visitor history: show the pass again.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const wanted = q.get('pass');
+    if (wanted) {
+      const saved = getPass(wanted);
+      if (saved) {
+        setCreated(saved);
+        return;
+      }
+    }
+    if (q.get('name')) return;
+    const again = reopenablePass();
+    if (again) setCreated(again);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const whatsappHref = created ? buildWhatsAppUrl(created) : '#';
   const smsHref = created ? buildSmsUrl(created) : '#';
 
@@ -94,7 +120,14 @@ export default function CreateVisitorPage() {
       <a href={smsHref} className="text-center text-sm text-brass underline">
         No data? Send as SMS
       </a>
-      <Button variant="ghost" fullWidth onClick={() => setCreated(null)}>
+      <Button
+        variant="ghost"
+        fullWidth
+        onClick={() => {
+          markClosed();
+          setCreated(null);
+        }}
+      >
         Invite another visitor
       </Button>
     </>

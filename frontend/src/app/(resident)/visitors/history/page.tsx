@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, toStatusBadgeKey } from '@/components/ui/StatusBadge';
 import { ExtendPassButton, type ExtendResult } from '@/components/visitor/ExtendPassButton';
+import { SharePassLink } from '@/components/visitor/SharePassLink';
 import { apiFetch } from '@/lib/api-client';
 import { formatVisitWindow, formatShortDate } from '@/lib/format';
 import type { InvitationHistoryItem } from '@/types/invitation';
@@ -34,7 +35,14 @@ export default function VisitorHistoryPage() {
   async function load() {
     try {
       const result = await apiFetch<InvitationHistoryItem[]>('/invitations');
-      setInvitations(result);
+      // A pass whose time has run out is expired, even if the server has not caught up yet.
+      setInvitations(
+        result.map((inv) =>
+          inv.status === 'ACTIVE' && new Date(inv.validUntil).getTime() < Date.now()
+            ? { ...inv, status: 'EXPIRED' as const }
+            : inv,
+        ),
+      );
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load your visitor history.');
@@ -151,6 +159,7 @@ export default function VisitorHistoryPage() {
                     >
                       Invite again
                     </Link>
+                    <SharePassLink id={invitation.id} />
                   </div>
                 </div>
 
