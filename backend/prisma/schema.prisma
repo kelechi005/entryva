@@ -526,3 +526,121 @@ model OfficerMessage {
   // fromUserId) for the officer list screen.
   @@index([estateId, toUserId, readAt])
 }
+
+
+// ---- Recurring passes (house help, drivers, cleaners, regular deliveries) ----
+// Owner/estate/unit are plain ids for now; foreign keys to the existing
+// tables are added once the API is wired up.
+
+enum RecurringPassStatus {
+  ACTIVE
+  PAUSED
+  REVOKED
+  EXPIRED
+}
+
+enum RecurringPassRole {
+  HOUSE_HELP
+  DRIVER
+  CLEANER
+  DELIVERY
+  OTHER
+}
+
+enum RecurringPassExceptionType {
+  SKIP
+  EXTRA
+}
+
+enum RecurringScanDirection {
+  IN
+  OUT
+}
+
+enum RecurringScanResult {
+  ALLOWED
+  DENIED
+}
+
+model RecurringPass {
+  id          String            @id @default(cuid())
+  estateId    String
+  residentId  String
+  apartmentId String
+
+  fullName String
+  phone    String?
+  role     RecurringPassRole
+  photoUrl String?
+
+  // Allowed weekdays (0 = Sunday ... 6 = Saturday) and the daily window, in
+  // minutes after local midnight (09:00 = 540). All in the estate's time zone.
+  days        Int[]
+  startMinute Int
+  endMinute   Int
+
+  validFrom    DateTime @db.Date
+  validUntil   DateTime @db.Date
+  graceMinutes Int      @default(30)
+
+  status RecurringPassStatus @default(ACTIVE)
+
+  // Only the hash of the secret link token is stored.
+  tokenHash String @unique
+
+  // First phone that opened the pass (a hash of a random id kept on that phone).
+  linkedDeviceHash String?
+  linkedAt         DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  exceptions RecurringPassException[]
+  scans      RecurringPassScan[]
+
+  @@index([estateId, status])
+  @@index([residentId])
+  @@index([apartmentId, status])
+}
+
+model RecurringPassException {
+  id     String                     @id @default(cuid())
+  passId String
+  pass   RecurringPass              @relation(fields: [passId], references: [id], onDelete: Cascade)
+  date   DateTime                   @db.Date
+  type   RecurringPassExceptionType
+
+  // For EXTRA days only: optional custom hours (minutes after local midnight).
+  startMinute Int?
+  endMinute   Int?
+
+  createdAt DateTime @default(now())
+
+  @@unique([passId, date])
+}
+
+// One row per scan. Append-only: the database rejects UPDATE and DELETE.
+model RecurringPassScan {
+  id            String                  @id @default(cuid())
+  passId        String
+  pass          RecurringPass           @relation(fields: [passId], references: [id], onDelete: Restrict)
+  officerUserId String?
+  scannedAt     DateTime                @default(now())
+  direction     RecurringScanDirection?
+  result        RecurringScanResult
+  reason        String?
+
+  @@index([passId, scannedAt])
+}
+
+model EstateBlockedPerson {
+  id        String   @id @default(cuid())
+  estateId  String
+  phone     String
+  fullName  String?
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@unique([estateId, phone])
+  @@index([estateId])
+}
