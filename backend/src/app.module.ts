@@ -22,6 +22,7 @@ import { EstateLocationModule } from './modules/estate-location/estate-location.
 import { MessagesModule } from './modules/messages/messages.module';
 import { SignupModule } from './modules/signup/signup.module';
 import { InvitationExtensionsModule } from './modules/invitation-extensions/invitation-extensions.module';
+import { RecurringPassesModule } from './modules/recurring-passes/recurring-passes.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { InvitationExtensionsModule } from './modules/invitation-extensions/invi
     MessagesModule,
     SignupModule,
     InvitationExtensionsModule,
+    RecurringPassesModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

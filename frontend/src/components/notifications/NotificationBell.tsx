@@ -20,6 +20,11 @@ const NOTIFICATION_COPY: Record<NotificationType, (payload: Record<string, unkno
   INVITATION_EXPIRED: (p) => `The invitation for ${(p?.visitorName as string) ?? 'your visitor'} expired.`,
   INVITATION_CREATED: (p) => `Invitation created for ${(p?.visitorName as string) ?? 'your visitor'}.`,
   INVITATION_REVOKED: (p) => `Invitation for ${(p?.visitorName as string) ?? 'your visitor'} was revoked.`,
+  INVITATION_EXTENDED: (p) => `The pass for ${(p?.visitorName as string) ?? 'your visitor'} was extended.`,
+  RECURRING_PASS_ENTERED: (p) => `${(p?.visitorName as string) ?? 'Your regular visitor'} came in.`,
+  RECURRING_PASS_EXITED: (p) => `${(p?.visitorName as string) ?? 'Your regular visitor'} went out.`,
+  RECURRING_PASS_OVERDUE: (p) =>
+    `${(p?.visitorName as string) ?? 'Your regular visitor'} is still marked inside past their allowed hours.`,
 };
 
 function describe(notification: AppNotification): string {

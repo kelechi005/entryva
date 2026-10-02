@@ -12,6 +12,9 @@ import { Button } from '@/components/ui/Button';
 import { QrScanner } from '@/components/security/QrScanner';
 import { ManualCodeEntry } from '@/components/security/ManualCodeEntry';
 import { VerificationResultCard } from '@/components/security/VerificationResultCard';
+import { RecurringScanCard } from '@/components/security/RecurringScanCard';
+import { isRecurringQr } from '@/lib/recurring-pass';
+import type { RecurringScanResponse } from '@/types/recurring-pass';
 import { StatCard } from '@/components/ui/StatCard';
 import { apiFetch } from '@/lib/api-client';
 import { formatRelativeTime } from '@/lib/format';
@@ -39,7 +42,7 @@ import {
   WifiOffIcon,
 } from '@/components/ui/icons';
 
-type Mode = 'home' | 'scan' | 'manual' | 'result';
+type Mode = 'home' | 'scan' | 'manual' | 'result' | 'recurring';
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -103,6 +106,7 @@ export default function SecurityGatePage() {
   const [mode, setMode] = useState<Mode>('home');
   const [cameraUnavailable, setCameraUnavailable] = useState(false);
   const [result, setResult] = useState<VerificationResult | null>(null);
+  const [recurringResult, setRecurringResult] = useState<RecurringScanResponse | null>(null);
   const [lastMethod, setLastMethod] = useState<'QR' | 'MANUAL_CODE'>('QR');
   const [actionPending, setActionPending] = useState(false);
   const [exitingVisitId, setExitingVisitId] = useState<string | null>(null);
@@ -196,6 +200,7 @@ export default function SecurityGatePage() {
   function backToHome() {
     setMode('home');
     setResult(null);
+    setRecurringResult(null);
     setCameraUnavailable(false);
   }
 
@@ -208,6 +213,30 @@ export default function SecurityGatePage() {
     // and looks up. If a scan or offline-cached value is somehow already
     // a bare token (no slashes), it's used as-is.
     const token = rawScan.includes('/') ? rawScan.split('/').filter(Boolean).pop()! : rawScan;
+
+    // A regular visitor's pass (house help, driver...). The server checks the
+    // schedule and the daily code, records the scan, and decides in or out.
+    // This needs a connection: the daily code and the schedule live on the server.
+    if (isRecurringQr(token)) {
+      try {
+        const res = await apiFetch<RecurringScanResponse>('/recurring-passes/scan', {
+          method: 'POST',
+          body: JSON.stringify({ token }),
+        });
+        setRecurringResult(res);
+        setMode('recurring');
+      } catch (err) {
+        setError(
+          isNetworkFailure(err)
+            ? 'Regular-visitor passes can only be checked online. Use your usual manual check until the connection is back.'
+            : err instanceof Error
+              ? err.message
+              : 'Could not check that pass.',
+        );
+        backToHome();
+      }
+      return;
+    }
     try {
       const res = await apiFetch<VerificationResult>('/verification/qr', {
         method: 'POST',
@@ -539,6 +568,12 @@ export default function SecurityGatePage() {
             <div className="mx-auto flex w-full max-w-sm flex-col gap-5 animate-fade-up">
               <StepHeader title="Enter Visitor Code" onBack={backToHome} />
               <ManualCodeEntry onSubmit={handleVerifyCode} cameraUnavailableNotice={cameraUnavailable} />
+            </div>
+          )}
+
+          {mode === 'recurring' && recurringResult && (
+            <div className="animate-fade-up">
+              <RecurringScanCard result={recurringResult} onDismiss={backToHome} />
             </div>
           )}
 

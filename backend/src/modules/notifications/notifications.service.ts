@@ -13,7 +13,10 @@ export type NotificationType =
   | 'VISITOR_EXITED'
   | 'INVITATION_REVOKED'
   | 'INVITATION_EXPIRED'
-  | 'INVITATION_EXTENDED';
+  | 'INVITATION_EXTENDED'
+  | 'RECURRING_PASS_ENTERED'
+  | 'RECURRING_PASS_EXITED'
+  | 'RECURRING_PASS_OVERDUE';
 
 export interface DispatchNotificationInput {
   userId: string;
