@@ -13,12 +13,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { ProfileMenu } from '@/components/ui/ProfileMenu';
-import { HomeIcon, VisitorsIcon, PlusIcon } from '@/components/ui/icons';
+import { HomeIcon, VisitorsIcon, PlusIcon, CalendarIcon } from '@/components/ui/icons';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Home', icon: HomeIcon },
   { href: '/visitors/new', label: 'Create', icon: PlusIcon },
   { href: '/visitors/history', label: 'Visitors', icon: VisitorsIcon },
+  { href: '/recurring', label: 'Regular', icon: CalendarIcon },
 ];
 
 export default function ResidentLayout({ children }: { children: React.ReactNode }) {
@@ -54,7 +55,7 @@ export default function ResidentLayout({ children }: { children: React.ReactNode
                 }`}
               >
                 <Icon className={`h-[18px] w-[18px] ${active ? 'text-brass' : ''}`} />
-                {item.label === 'Create' ? 'Invite Visitor' : item.label}
+                {item.label === 'Create' ? 'Invite Visitor' : item.label === 'Regular' ? 'Regular Visitors' : item.label}
               </Link>
             );
           })}
