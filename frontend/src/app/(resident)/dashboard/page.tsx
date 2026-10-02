@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, toStatusBadgeKey } from '@/components/ui/StatusBadge';
 import { apiFetch } from '@/lib/api-client';
-import { formatVisitWindow } from '@/lib/format';
+import { formatShortVisitWindow } from '@/lib/format';
 import type { ResidentOverview, InvitationHistoryItem } from '@/types/invitation';
 import type { AuthenticatedUser } from '@/types/auth';
 import {
@@ -43,6 +43,7 @@ export default function ResidentDashboardPage() {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [overview, setOverview] = useState<ResidentOverview | null>(null);
   const [recent, setRecent] = useState<InvitationHistoryItem[]>([]);
+  const [active, setActive] = useState<InvitationHistoryItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -60,6 +61,11 @@ export default function ResidentDashboardPage() {
         setUser(me);
         setOverview(overviewData);
         setRecent(invitations.slice(0, 5));
+        setActive(
+          invitations.filter(
+            (inv) => inv.status === 'ACTIVE' && new Date(inv.validUntil).getTime() > Date.now(),
+          ),
+        );
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Could not load your dashboard.');
@@ -141,6 +147,56 @@ export default function ResidentDashboardPage() {
             <QuickAction href="/visitors/history" label="Security" icon={ShieldIcon} />
           </div>
 
+          {/* Active passes */}
+          <section className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-xl font-semibold text-ink">Active Passes</h2>
+              {active.length > 0 && (
+                <Link href="/visitors/history" className="text-sm font-medium text-brass hover:underline">
+                  View all
+                </Link>
+              )}
+            </div>
+
+            {loading ? (
+              <div className="h-[90px] animate-pulse rounded-card bg-white/[0.04]" />
+            ) : error ? null : active.length === 0 ? (
+              <div className="glass-card rounded-card px-6 py-6 text-center">
+                <p className="text-sm text-ink-400">No active passes right now.</p>
+              </div>
+            ) : (
+              <ul className="flex flex-col gap-2.5">
+                {active.map((pass) => (
+                  <li
+                    key={pass.id}
+                    className="glass-card flex min-h-[90px] items-center justify-between gap-4 rounded-card px-5 py-4 transition-colors duration-150 ease-premium hover:bg-white/[0.06]"
+                  >
+                    <div className="flex min-w-0 items-center gap-3.5">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-sm font-semibold text-ink">
+                        {initials(pass.visitorName)}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-ink">{pass.visitorName}</p>
+                        <p className="text-sm text-ink-400">
+                          {formatShortVisitWindow(pass.validFrom, pass.validUntil)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <StatusBadge status={toStatusBadgeKey(pass.status)} />
+                      <Link
+                        href={`/visitors/track/${pass.id}`}
+                        className="text-sm font-medium text-brass hover:underline"
+                      >
+                        Track arrival
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
           {/* Recent visitors */}
           <section className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
@@ -177,7 +233,7 @@ export default function ResidentDashboardPage() {
                       <div>
                         <p className="font-semibold text-ink">{invitation.visitorName}</p>
                         <p className="text-sm text-ink-400">
-                          {formatVisitWindow(invitation.validFrom, invitation.validUntil)}
+                          {formatShortVisitWindow(invitation.validFrom, invitation.validUntil)}
                         </p>
                       </div>
                     </div>

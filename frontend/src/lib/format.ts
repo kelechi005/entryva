@@ -35,3 +35,28 @@ export function formatRelativeTime(iso: string): string {
   if (diffHr < 24) return `${diffHr}h ago`;
   return formatShortDate(iso);
 }
+
+
+function shortTime(d: Date): string {
+  // "4 PM" on the hour, "4:30 PM" otherwise, in the person's own locale.
+  return d.toLocaleTimeString(
+    undefined,
+    d.getMinutes() === 0 ? { hour: 'numeric' } : { hour: 'numeric', minute: '2-digit' },
+  );
+}
+
+function shortDayLabel(d: Date): string {
+  const startOfDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diffDays = Math.round((startOfDay(d) - startOfDay(new Date())) / 86_400_000);
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Tomorrow';
+  if (diffDays === -1) return 'Yesterday';
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+/** "Today · 4 PM – 8 PM" or "Sat, Sep 12 · 4 PM – 8 PM" - the compact form for lists on Home. */
+export function formatShortVisitWindow(validFrom: string, validUntil: string): string {
+  const from = new Date(validFrom);
+  const until = new Date(validUntil);
+  return `${shortDayLabel(from)} \u00b7 ${shortTime(from)} \u2013 ${shortTime(until)}`;
+}

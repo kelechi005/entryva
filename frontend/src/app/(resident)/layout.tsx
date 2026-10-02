@@ -12,7 +12,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
-import { LogoutButton } from '@/components/ui/LogoutButton';
+import { ProfileMenu } from '@/components/ui/ProfileMenu';
 import { HomeIcon, VisitorsIcon, PlusIcon } from '@/components/ui/icons';
 
 const NAV_ITEMS = [
@@ -65,7 +65,7 @@ export default function ResidentLayout({ children }: { children: React.ReactNode
             <span className="text-xs font-medium text-ink-400">Alerts</span>
             <NotificationBell />
           </div>
-          <LogoutButton className="px-2" />
+          <ProfileMenu placement="up" subtitle="Resident" />
         </div>
       </aside>
 
@@ -79,11 +79,12 @@ export default function ResidentLayout({ children }: { children: React.ReactNode
         </span>
         <div className="flex items-center gap-1">
           <NotificationBell />
+          <ProfileMenu subtitle="Resident" compact />
         </div>
       </header>
 
       <div className="lg:pl-64">
-        <div className="pb-28 lg:pb-10">{children}</div>
+        <div className="pb-[calc(9.5rem+env(safe-area-inset-bottom))] lg:pb-10">{children}</div>
       </div>
 
       {/* Mobile floating glass dock */}
@@ -117,7 +118,6 @@ export default function ResidentLayout({ children }: { children: React.ReactNode
               </Link>
             );
           })}
-          <LogoutButton className="px-4 !text-[11px]" />
         </div>
       </nav>
     </div>

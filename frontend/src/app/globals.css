@@ -84,3 +84,41 @@ html, body {
 body {
   font-family: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
 }
+
+
+/* Native date and time pickers: match the dark theme. On iPhones this removes
+   the light grey "pill" so these inputs look like every other field. */
+input[type='date'],
+input[type='time'],
+input[type='datetime-local'] {
+  color-scheme: dark;
+  accent-color: #5da8ff;
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  min-height: 3.25rem;
+  min-width: 0;
+  max-width: 100%;
+  text-align: left;
+  line-height: 1.2;
+}
+input[type='date']::-webkit-date-and-time-value,
+input[type='time']::-webkit-date-and-time-value,
+input[type='datetime-local']::-webkit-date-and-time-value {
+  text-align: left;
+  min-height: 1.2em;
+}
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='time']::-webkit-calendar-picker-indicator,
+input[type='datetime-local']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.75;
+  border-radius: 6px;
+  padding: 4px;
+}
+input[type='date']::-webkit-calendar-picker-indicator:hover,
+input[type='time']::-webkit-calendar-picker-indicator:hover,
+input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+}
