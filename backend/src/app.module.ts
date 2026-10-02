@@ -21,6 +21,7 @@ import { HealthModule } from './modules/health/health.module';
 import { EstateLocationModule } from './modules/estate-location/estate-location.module';
 import { MessagesModule } from './modules/messages/messages.module';
 import { SignupModule } from './modules/signup/signup.module';
+import { InvitationExtensionsModule } from './modules/invitation-extensions/invitation-extensions.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { SignupModule } from './modules/signup/signup.module';
     EstateLocationModule,
     MessagesModule,
     SignupModule,
+    InvitationExtensionsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

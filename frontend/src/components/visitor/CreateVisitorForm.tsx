@@ -12,6 +12,7 @@ interface CreateVisitorFormProps {
 }
 
 const emptyForm: CreateInvitationInput = {
+  visitorType: 'GUEST',
   visitorName: '',
   visitorPhone: '',
   visitDate: new Date().toISOString().slice(0, 10),
@@ -76,6 +77,28 @@ export function CreateVisitorForm({ onSubmit, initial }: CreateVisitorFormProps)
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brass">Step 1 of 1</p>
         <h2 className="text-lg font-semibold text-ink">Who&rsquo;s visiting?</h2>
       </div>
+
+      <div role="radiogroup" aria-label="Visitor type" className="grid grid-cols-2 gap-2">
+        {(['GUEST', 'COURIER'] as const).map((type) => (
+          <button
+            key={type}
+            type="button"
+            role="radio"
+            aria-checked={form.visitorType === type}
+            onClick={() => setForm((prev) => ({ ...prev, visitorType: type }))}
+            className={`rounded-2xl border px-4 py-3 text-sm font-medium transition-colors duration-150 ease-premium ${
+              form.visitorType === type
+                ? 'border-brass/60 bg-brass/10 text-ink'
+                : 'border-ink-100 text-ink-400 hover:text-ink'
+            }`}
+          >
+            {type === 'GUEST' ? 'Guest' : 'Courier / delivery'}
+          </button>
+        ))}
+      </div>
+      {form.visitorType === 'COURIER' && (
+        <p className="-mt-2 text-xs text-ink-400">Courier passes work for one entry only.</p>
+      )}
 
       <Field
         label="Visitor name"

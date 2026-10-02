@@ -145,6 +145,14 @@ model Estate {
   mainGateLongitude    Float?
   entranceInstructions String?
   arrivalRadiusMeters  Int     @default(100)
+
+  // Pass extension rules (see InvitationExtensionsService). Set per estate.
+  passExtensionsEnabled Boolean @default(true)
+  passExtendMaxMinutes  Int     @default(120)
+  passMaxTotalMinutes   Int     @default(720)
+  // Quiet hours, in minutes after local midnight (22:00 = 1320). Both null = off.
+  passQuietFromMinute   Int?
+  passQuietToMinute     Int?
   id        String       @id @default(cuid())
   name      String
   address   String?
@@ -356,6 +364,7 @@ model Invitation {
   validUntil DateTime
   status     InvitationStatus @default(PENDING)
   entryPolicy EntryPolicy     @default(ONE_TIME)
+  visitorType VisitorType     @default(GUEST)
 
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
@@ -643,4 +652,10 @@ model EstateBlockedPerson {
 
   @@unique([estateId, phone])
   @@index([estateId])
+}
+
+
+enum VisitorType {
+  GUEST
+  COURIER
 }

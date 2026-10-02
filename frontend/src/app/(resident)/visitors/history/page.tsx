@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, toStatusBadgeKey } from '@/components/ui/StatusBadge';
+import { ExtendPassButton, type ExtendResult } from '@/components/visitor/ExtendPassButton';
 import { apiFetch } from '@/lib/api-client';
 import { formatVisitWindow, formatShortDate } from '@/lib/format';
 import type { InvitationHistoryItem } from '@/types/invitation';
@@ -60,6 +61,15 @@ export default function VisitorHistoryPage() {
     } finally {
       setRevokingId(null);
     }
+  }
+
+  // The server has already saved the new expiry; show it straight away.
+  function handleExtended(result: ExtendResult) {
+    setInvitations((prev) =>
+      prev.map((inv) =>
+        inv.id === result.id ? { ...inv, validUntil: result.validUntil, status: result.status } : inv,
+      ),
+    );
   }
 
   const filtered = invitations.filter((inv) => {
@@ -127,6 +137,11 @@ export default function VisitorHistoryPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-semibold text-ink">{invitation.visitorName}</p>
                       <StatusBadge status={toStatusBadgeKey(invitation.status)} />
+                      {invitation.visitorType === 'COURIER' && (
+                        <span className="rounded-pill bg-white/[0.08] px-2.5 py-0.5 text-xs font-medium text-ink-400">
+                          Courier
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm text-ink-400">
                       {formatVisitWindow(invitation.validFrom, invitation.validUntil)}
@@ -145,13 +160,14 @@ export default function VisitorHistoryPage() {
                 </div>
 
                 {canRevoke && (
-                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
                     <Link
                       href={`/visitors/track/${invitation.id}`}
                       className="rounded-pill px-4 py-2 text-sm font-medium text-brass underline"
                     >
                       Track arrival
                     </Link>
+                    <ExtendPassButton invitationId={invitation.id} onExtended={handleExtended} />
                     <Button
                       variant="ghost"
                       onClick={() => handleRevoke(invitation.id)}

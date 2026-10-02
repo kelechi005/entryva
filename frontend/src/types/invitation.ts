@@ -6,6 +6,8 @@ export type InvitationStatus =
   | 'REVOKED'
   | 'CANCELLED';
 
+export type VisitorType = 'GUEST' | 'COURIER';
+
 export interface CreateInvitationInput {
   visitorName: string;
   visitorPhone?: string;
@@ -13,6 +15,7 @@ export interface CreateInvitationInput {
   startTime: string; // "16:00"
   endTime: string; // "20:00"
   notes?: string;
+  visitorType?: VisitorType;
 }
 
 export interface CreatedInvitation {
@@ -26,6 +29,7 @@ export interface CreatedInvitation {
   status: InvitationStatus;
   displayCode: string; // plaintext, shown once
   shareUrl: string; // plaintext, shown once
+  visitorType?: VisitorType;
 }
 
 // Shape returned by GET /invitations (InvitationsService.listForResident) —
@@ -43,6 +47,7 @@ export interface InvitationHistoryItem {
   createdAt: string;
   revokedAt: string | null;
   usedAt: string | null;
+  visitorType?: VisitorType;
 }
 
 // Mirrors InvitationsService.getResidentOverview.

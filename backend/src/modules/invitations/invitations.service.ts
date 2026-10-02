@@ -26,6 +26,7 @@ export interface CreatedInvitationResponse {
   status: string;
   displayCode: string; // plaintext — shown to the resident exactly once
   shareUrl: string; // plaintext — shown to the resident exactly once
+  visitorType: 'GUEST' | 'COURIER';
 }
 
 export interface PublicInvitationResponse {
@@ -96,7 +97,8 @@ export class InvitationsService {
         validFrom,
         validUntil,
         status: 'ACTIVE',
-        entryPolicy: dto.entryPolicy ?? 'ONE_TIME',
+        entryPolicy: dto.visitorType === 'COURIER' ? 'ONE_TIME' : dto.entryPolicy ?? 'ONE_TIME',
+        visitorType: dto.visitorType ?? 'GUEST',
       },
     });
 
@@ -130,6 +132,7 @@ export class InvitationsService {
       validFrom: invitation.validFrom.toISOString(),
       validUntil: invitation.validUntil.toISOString(),
       status: invitation.status,
+      visitorType: invitation.visitorType,
       displayCode, // plaintext, this response only
       shareUrl, // plaintext, this response only
     };
@@ -218,6 +221,7 @@ export class InvitationsService {
       validUntil: invitation.validUntil.toISOString(),
       status: invitation.status,
       entryPolicy: invitation.entryPolicy,
+      visitorType: invitation.visitorType,
       createdAt: invitation.createdAt.toISOString(),
       revokedAt: invitation.revokedAt?.toISOString() ?? null,
       usedAt: invitation.usedAt?.toISOString() ?? null,

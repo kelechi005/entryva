@@ -39,4 +39,9 @@ export class CreateInvitationDto {
   @IsOptional()
   @IsIn(['ONE_TIME', 'MULTI_ENTRY'])
   entryPolicy?: 'ONE_TIME' | 'MULTI_ENTRY';
+
+  // A courier or delivery person. Courier passes are always one-time.
+  @IsOptional()
+  @IsIn(['GUEST', 'COURIER'])
+  visitorType?: 'GUEST' | 'COURIER';
 }
