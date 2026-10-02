@@ -137,11 +137,6 @@ export default function VisitorHistoryPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-semibold text-ink">{invitation.visitorName}</p>
                       <StatusBadge status={toStatusBadgeKey(invitation.status)} />
-                      {invitation.visitorType === 'COURIER' && (
-                        <span className="rounded-pill bg-white/[0.08] px-2.5 py-0.5 text-xs font-medium text-ink-400">
-                          Courier
-                        </span>
-                      )}
                     </div>
                     <p className="text-sm text-ink-400">
                       {formatVisitWindow(invitation.validFrom, invitation.validUntil)}

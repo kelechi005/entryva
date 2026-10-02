@@ -48,7 +48,7 @@ export function NotificationBell() {
   }, []);
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="sm:relative">
       <button
         type="button"
         aria-label={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
@@ -64,7 +64,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="dropdown-panel absolute right-0 z-20 mt-2 w-80 overflow-hidden rounded-card shadow-card animate-fade-up">
+        <div className="dropdown-panel absolute inset-x-3 top-full z-20 mt-2 overflow-hidden rounded-card shadow-card animate-fade-up sm:inset-x-auto sm:right-0 sm:w-80 lg:bottom-full lg:left-0 lg:right-auto lg:top-auto lg:mb-2 lg:mt-0">
           <div className="flex items-center justify-between border-b border-ink-100 px-4 py-3.5">
             <span className="font-display text-base font-semibold text-ink">Notifications</span>
             {unreadCount > 0 && (
