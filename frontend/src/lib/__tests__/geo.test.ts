@@ -1,6 +1,11 @@
 import {
   ARRIVAL_CONFIRMATIONS,
+  MIN_GATE_ZOOM,
+  appleMapsUrl,
+  routeEndGapM,
+  wazeUrl,
   POOR_ACCURACY_M,
+  circlePolygon,
   evaluateArrival,
   externalDirectionsUrl,
   formatDistance,
@@ -77,5 +82,51 @@ describe('externalDirectionsUrl', () => {
     expect(externalDirectionsUrl({ lat: 7.7345, lng: 8.5221 })).toBe(
       'https://www.google.com/maps/dir/?api=1&destination=7.7345,8.5221&travelmode=driving',
     );
+  });
+});
+
+describe('circlePolygon', () => {
+  const center = { lat: 7.7345, lng: 8.5221 };
+
+  it('is a closed ring whose every point sits at the radius from the centre', () => {
+    const ring = circlePolygon(center, 100);
+    expect(ring[0]).toEqual(ring[ring.length - 1]);
+    for (const [lng, lat] of ring) {
+      const d = haversineMeters(center, { lat, lng });
+      expect(d).toBeGreaterThan(99);
+      expect(d).toBeLessThan(101);
+    }
+  });
+});
+
+describe('other map apps', () => {
+  it('builds Waze and Apple Maps links to the gate', () => {
+    expect(wazeUrl({ lat: 7.7345, lng: 8.5221 })).toBe('https://waze.com/ul?ll=7.7345,8.5221&navigate=yes');
+    expect(appleMapsUrl({ lat: 7.7345, lng: 8.5221 })).toBe('https://maps.apple.com/?daddr=7.7345,8.5221&dirflg=d');
+  });
+});
+
+describe('routeEndGapM', () => {
+  const gate = { lat: 7.7345, lng: 8.5221 };
+
+  it('is ~0 when the route ends on the gate', () => {
+    expect(routeEndGapM([[8.5, 7.7], [8.5221, 7.7345]], gate)).toBeLessThan(1);
+  });
+
+  it('shows how far the road stops short of the gate pin', () => {
+    // ~111 m north of the gate
+    const gap = routeEndGapM([[8.5, 7.7], [8.5221, 7.7355]], gate) as number;
+    expect(gap).toBeGreaterThan(105);
+    expect(gap).toBeLessThan(117);
+  });
+
+  it('returns null for an empty route', () => {
+    expect(routeEndGapM([], gate)).toBeNull();
+  });
+});
+
+describe('MIN_GATE_ZOOM', () => {
+  it('forces street-level zoom for the gate', () => {
+    expect(MIN_GATE_ZOOM).toBeGreaterThanOrEqual(16);
   });
 });

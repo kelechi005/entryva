@@ -27,6 +27,10 @@ ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 # for the same reason as the API URL above. Empty = map features off.
 ARG NEXT_PUBLIC_MAPBOX_TOKEN=
 ENV NEXT_PUBLIC_MAPBOX_TOKEN=$NEXT_PUBLIC_MAPBOX_TOKEN
+# Optional Mapbox Studio style (mapbox://styles/...) for the Entryva look.
+# Empty = built-in dark style.
+ARG NEXT_PUBLIC_MAPBOX_STYLE=
+ENV NEXT_PUBLIC_MAPBOX_STYLE=$NEXT_PUBLIC_MAPBOX_STYLE
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build

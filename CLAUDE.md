@@ -257,27 +257,46 @@ mainGateLongitude` (the visitor entrance), `entranceInstructions`,
 or routing by visitor type, is a new decision (see §7 for how to re-derive
 it).
 
-- Admin sets it on the Estate page (`EstateLocationCard`) by panning a
-  satellite map and pressing "Set ... here" (or typing coordinates). The
-  coordinates saved are the ones the admin placed - Mapbox search is used
-  only to move the map (Mapbox search results may not be stored).
-  `PUT /admin/estate/location`, ESTATE_ADMIN scoped server-side to their
-  own estate (§11), audited as `ADMIN_CHANGED_ESTATE`.
+- The map lives on two FULL-SCREEN pages, not inside other pages:
+  `/estate-location` (admin sets the pins; outside the `(admin)` layout on
+  purpose) and `/invite/<token>/navigate` (visitor navigation). The
+  dashboard and the pass page only show a small card linking to them.
+- Admin (`LocationEditor`): stand at the gate and tap "Use my location as
+  the main gate" (phone GPS; a rough reading is refused), or pan a
+  satellite map and press "Set ... here" (or type coordinates). The gate
+  can only be set from the map at street-level zoom (`MIN_GATE_ZOOM`), the
+  dashed ring shows the "arrived" zone, and "Preview route" warns when the
+  road ends away from the gate pin. The coordinates saved are the ones the
+  admin placed - Mapbox search only moves the map (Mapbox search results
+  may not be stored). `PUT /admin/estate/location`, ESTATE_ADMIN scoped
+  server-side to their own estate (§11), audited as `ADMIN_CHANGED_ESTATE`.
 - Visitor: `GET /invitations/public/:token/location` returns ONLY the gate
   (name, coordinates, tip, arrival radius) and only while the invitation is
   ACTIVE/PENDING and in its window. No estate-centre pin, no resident or
   visitor data (§6).
-- The visitor's GPS position stays in their browser. Arrival is decided
-  on-device (`lib/geo.ts`: within the radius, accuracy <= 100 m, two
-  readings in a row). It is never sent to our server, so admins and
-  residents gain no way to track visitors (§6.1).
+- The visitor's GPS position stays in their browser by default. Arrival is
+  decided on-device (`lib/geo.ts`: within the radius, accuracy <= 100 m,
+  two readings in a row). The ONLY thing that sends it to our server is the
+  visitor tapping "Share my live location" (`ShareLiveLocation`): opt-in,
+  to the person who invited them only, latest point only, stops on
+  arrival or Stop, and is then deleted. Spoken directions
+  (`VoiceGuidance`) run on the same on-device GPS feed. Admins and other
+  residents never see visitor positions (§6.1).
 - Mapbox is called from the browser with a PUBLIC (`pk.`) token, restricted
   to the production domain in the Mapbox dashboard. One route request per
-  tap - no polling. A secret (`sk.`) token must never be used here.
-- Build-time variable: `NEXT_PUBLIC_MAPBOX_TOKEN` (GitHub variable
-  `MAPBOX_PUBLIC_TOKEN`, passed as a Docker build arg like
-  `NEXT_PUBLIC_API_BASE_URL`). If missing, the admin can still type
-  coordinates and visitors still get the gate details and a Google Maps link.
+  tap - no polling by the visitor screen. A secret (`sk.`) token must
+  never be used here.
+- Look: `MapView` has a `theme="dark"` (Entryva look: dark map, glowing
+  route, branded gate pin with its name, pulsing "you" dot, green arrival
+  ring, blue GPS-accuracy ring). Other maps (e.g. the resident tracking
+  page) keep the default light look until they opt in.
+- Build-time variables (GitHub variables passed as Docker build args, like
+  `NEXT_PUBLIC_API_BASE_URL`): `NEXT_PUBLIC_MAPBOX_TOKEN` (`MAPBOX_PUBLIC_TOKEN`)
+  and optionally `NEXT_PUBLIC_MAPBOX_STYLE` (`MAPBOX_STYLE_URL`, a Mapbox
+  Studio style for a fully custom look; default is Mapbox's dark style).
+  If the token is missing, the admin can still use phone GPS or type
+  coordinates, and visitors still get the gate details and links to
+  Google Maps / Waze / Apple Maps.
 
 ---
 

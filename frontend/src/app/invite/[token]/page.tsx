@@ -86,12 +86,7 @@ export default function VisitorInvitePage({ params }: { params: { token: string 
       )}
 
       {state.status === 'ready' && LIVE_STATUSES.has(state.invitation.status) && (
-        <NavigateToEstate
-          token={params.token}
-          onShowPass={() =>
-            document.getElementById('visitor-pass')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          }
-        />
+        <NavigateToEstate token={params.token} />
       )}
 
       {state.status === 'ready' && LIVE_STATUSES.has(state.invitation.status) && (

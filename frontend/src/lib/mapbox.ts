@@ -26,6 +26,30 @@ export function getMapboxToken(): string | null {
   return token && token.startsWith('pk.') ? token : null;
 }
 
+// ---- Map look (the Entryva "skin") ------------------------------------
+// Visitors get a dark map that matches the app. The admin always gets
+// satellite imagery, because placing the gate exactly needs to SEE the gate.
+// To use your own design from Mapbox Studio, set NEXT_PUBLIC_MAPBOX_STYLE
+// to its style URL (mapbox://styles/<your-username>/<style-id>); if it is
+// missing or wrong we quietly fall back to the built-in dark style.
+export const STYLE_DARK = 'mapbox://styles/mapbox/dark-v11';
+export const STYLE_SATELLITE = 'mapbox://styles/mapbox/satellite-streets-v12';
+export const STYLE_FALLBACK = 'mapbox://styles/mapbox/streets-v12';
+
+// Entryva brand colours used for things drawn on the map.
+export const MAP_COLORS = {
+  route: '#5DA8FF', // brand accent
+  gate: '#22C55E', // verified green
+  me: '#3B82F6',
+  estate: '#5DA8FF',
+} as const;
+
+export function getMapStyle(kind: 'visitor' | 'admin'): string {
+  if (kind === 'admin') return STYLE_SATELLITE;
+  const custom = process.env.NEXT_PUBLIC_MAPBOX_STYLE;
+  return custom && custom.startsWith('mapbox://styles/') ? custom : STYLE_DARK;
+}
+
 export interface PlaceResult {
   label: string;
   lat: number;

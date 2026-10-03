@@ -61,3 +61,54 @@ export function formatDuration(seconds: number): string {
 export function externalDirectionsUrl(dest: LatLng): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}&travelmode=driving`;
 }
+
+/**
+ * A circle on the map, as a closed ring of [lng, lat] points. Used to draw
+ * the "arrived" zone around the gate and the GPS accuracy ring around the
+ * visitor, so what the app decides is something people can see.
+ */
+export function circlePolygon(center: LatLng, radiusM: number, steps = 64): Array<[number, number]> {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const toDeg = (r: number) => (r * 180) / Math.PI;
+  const lat1 = toRad(center.lat);
+  const lng1 = toRad(center.lng);
+  const delta = radiusM / EARTH_RADIUS_M; // angle covered along the surface
+  const ring: Array<[number, number]> = [];
+  for (let i = 0; i < steps; i += 1) {
+    const bearing = (2 * Math.PI * i) / steps;
+    const lat2 = Math.asin(Math.sin(lat1) * Math.cos(delta) + Math.cos(lat1) * Math.sin(delta) * Math.cos(bearing));
+    const lng2 =
+      lng1 +
+      Math.atan2(
+        Math.sin(bearing) * Math.sin(delta) * Math.cos(lat1),
+        Math.cos(delta) - Math.sin(lat1) * Math.sin(lat2),
+      );
+    ring.push([toDeg(lng2), toDeg(lat2)]);
+  }
+  ring.push(ring[0]); // close the ring
+  return ring;
+}
+
+/** Other navigation apps, for visitors who prefer them. Same destination: the gate. */
+export function wazeUrl(dest: LatLng): string {
+  return `https://waze.com/ul?ll=${dest.lat},${dest.lng}&navigate=yes`;
+}
+
+export function appleMapsUrl(dest: LatLng): string {
+  return `https://maps.apple.com/?daddr=${dest.lat},${dest.lng}&dirflg=d`;
+}
+
+// A gate placed from far away can be hundreds of metres off. The admin
+// must zoom to roughly street level before the gate can be set.
+export const MIN_GATE_ZOOM = 16;
+
+/**
+ * How far the end of a driving route is from the gate pin. Routes end on
+ * the nearest ROAD, so a big gap means the pin is off the road network
+ * and visitors' directions would stop short of the gate.
+ */
+export function routeEndGapM(coordinates: Array<[number, number]>, gate: LatLng): number | null {
+  const last = coordinates[coordinates.length - 1];
+  if (!last) return null;
+  return haversineMeters({ lat: last[1], lng: last[0] }, gate);
+}
