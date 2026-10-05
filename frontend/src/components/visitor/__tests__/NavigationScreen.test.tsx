@@ -167,6 +167,69 @@ describe('NavigationScreen (full-screen map)', () => {
     expect(screen.getByRole('button', { name: 'Share my live location' })).toBeInTheDocument();
   });
 
+  describe('collapsible panel', () => {
+    it('shrinks to the heading and distance, and opens again', async () => {
+      await openScreen();
+      await fix(7.76, 8.55);
+      const toggle = screen.getByRole('button', { name: 'Hide directions panel' });
+      expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByRole('button', { name: /I.m at the gate/ })).toBeInTheDocument();
+
+      fireEvent.click(toggle);
+
+      expect(screen.getByRole('button', { name: 'Show directions panel' })).toHaveAttribute('aria-expanded', 'false');
+      expect(screen.queryByRole('button', { name: /I.m at the gate/ })).not.toBeInTheDocument();
+      expect(screen.getByText('Step-by-step directions')).not.toBeVisible();
+      expect(screen.getAllByText('Main Gate').length).toBeGreaterThan(0); // heading stays
+      // The distance stays visible (the same text also exists inside the folded part).
+      expect(screen.getAllByText(/km$/).filter((el) => el.closest('[hidden]') === null)).toHaveLength(1);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Show directions panel' }));
+      expect(screen.getByRole('button', { name: /I.m at the gate/ })).toBeInTheDocument();
+    });
+
+    it('keeps voice guidance and live sharing running while collapsed', async () => {
+      await openScreen();
+      await fix(7.76, 8.55);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Hide directions panel' }));
+
+      // Hidden from view, but still mounted (so they keep speaking / sharing).
+      expect(screen.queryByRole('button', { name: 'Start voice guidance' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Start voice guidance', hidden: true })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Share my live location', hidden: true })).toBeInTheDocument();
+    });
+
+    it('still shows a GPS problem while collapsed', async () => {
+      await openScreen();
+      fireEvent.click(screen.getByRole('button', { name: 'Hide directions panel' }));
+      await act(async () => {
+        onGpsError({ code: 1 });
+      });
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(/allow location access/i);
+    });
+
+    it('opens fully again on arrival, even if it was collapsed', async () => {
+      await openScreen();
+      await fix(7.76, 8.55);
+      fireEvent.click(screen.getByRole('button', { name: 'Hide directions panel' }));
+
+      await fix(7.7346, 8.5221);
+      await fix(7.7346, 8.5221);
+
+      expect(await screen.findByText(/You.ve arrived at Main Gate/)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Show Visitor Pass' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Share my live location' })).toBeInTheDocument(); // visible again
+    });
+
+    it('no longer repeats the gate name in a pill over the map controls', async () => {
+      await openScreen();
+      // Only the panel heading, the map's own label lives inside the (stubbed) map.
+      expect(screen.getAllByText('Main Gate')).toHaveLength(1);
+    });
+  });
+
   it('stops GPS when the visitor leaves the page', async () => {
     const { unmount } = await openScreen();
     await fix(7.76, 8.55);

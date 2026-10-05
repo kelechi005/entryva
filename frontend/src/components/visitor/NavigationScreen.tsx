@@ -71,10 +71,10 @@ export function NavigationScreen({ token }: { token: string }) {
   );
 }
 
-function TopBar({ passHref, title }: { passHref: string; title?: string }) {
+function TopBar({ passHref }: { passHref: string }) {
   return (
     <header
-      className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-3 px-3 pb-3"
+      className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center gap-3 px-3 pb-3"
       style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
     >
       <Link
@@ -83,11 +83,6 @@ function TopBar({ passHref, title }: { passHref: string; title?: string }) {
       >
         <ChevronRightIcon className="h-4 w-4 rotate-180" /> My pass
       </Link>
-      {title && (
-        <span className="glass-surface max-w-[55%] truncate rounded-full px-4 py-2.5 text-sm font-semibold text-ink">
-          {title}
-        </span>
-      )}
     </header>
   );
 }
@@ -105,10 +100,18 @@ function ActiveNavigation({
   const hasMapToken = Boolean(getMapboxToken());
   const startedRef = useRef(false);
 
+  // The bottom panel can be shrunk to one line so more of the map shows.
+  const [collapsed, setCollapsed] = useState(false);
+
   // The map follows the visitor as they move, until they drag it themselves.
   const [following, setFollowing] = useState(true);
   useEffect(() => {
     if (nav.phase === 'locating') setFollowing(true);
+  }, [nav.phase]);
+
+  // Arriving is the one moment the panel must be fully visible again.
+  useEffect(() => {
+    if (nav.phase === 'arrived') setCollapsed(false);
   }, [nav.phase]);
 
   // Begin as soon as the page opens (once).
@@ -190,7 +193,7 @@ function ActiveNavigation({
         )}
       </div>
 
-      <TopBar passHref={passHref} title={entrance.gateName} />
+      <TopBar passHref={passHref} />
 
       <section className={panelClass} style={panelPadBottom} aria-live="polite">
         {nav.phase === 'arrived' ? (
@@ -211,124 +214,151 @@ function ActiveNavigation({
           </div>
         ) : (
           <>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-ink-400">Heading to</p>
-              <p className="font-display text-lg font-semibold text-ink">
-                {entrance.gateName}{' '}
-                <span className="text-sm font-normal text-ink-400">&middot; {entrance.estateName}</span>
-              </p>
-              {entrance.instructions && <p className="text-sm text-ink-400">{entrance.instructions}</p>}
-            </div>
+            <button
+              type="button"
+              onClick={() => setCollapsed((c) => !c)}
+              aria-expanded={!collapsed}
+              aria-label={collapsed ? 'Show directions panel' : 'Hide directions panel'}
+              className="flex w-full items-start justify-between gap-3 text-left"
+            >
+              <span>
+                <span className="block text-xs font-medium uppercase tracking-wide text-ink-400">Heading to</span>
+                <span className="block font-display text-lg font-semibold text-ink">
+                  {entrance.gateName}{' '}
+                  <span className="text-sm font-normal text-ink-400">&middot; {entrance.estateName}</span>
+                </span>
+                {entrance.instructions && !collapsed && (
+                  <span className="block text-sm text-ink-400">{entrance.instructions}</span>
+                )}
+              </span>
+              <ChevronRightIcon
+                className={`mt-2 h-5 w-5 shrink-0 text-ink-400 transition-transform ${collapsed ? '-rotate-90' : 'rotate-90'}`}
+              />
+            </button>
 
-            {nav.phase === 'locating' && !nav.position && !nav.problem && (
-              <p className="text-sm text-ink-400">Finding your location&hellip;</p>
-            )}
-
-            {nav.problem && <ProblemNotice problem={nav.problem} />}
-
-            {!nav.online && (
-              <p className="flex items-center gap-2 rounded-xl bg-warn-50 px-3 py-2 text-sm text-warn">
-                <WifiOffIcon className="h-4 w-4 shrink-0" />
-                You&rsquo;re offline, so the map and route may not load. Your distance still updates.
-              </p>
-            )}
-
-            {nav.distanceM !== null && (
-              <div>
-                <p className="font-display text-3xl font-bold text-ink">{formatDistance(nav.distanceM)}</p>
-                <p className="text-sm text-ink-400">
-                  from the gate (straight line)
-                  {nav.route
-                    ? ` \u00b7 ${formatDistance(nav.route.distanceM)} by road \u00b7 ${formatDuration(nav.route.durationS)}`
-                    : ''}
-                </p>
-              </div>
-            )}
-
-            {weak && (
-              <p className="flex items-start gap-2 rounded-xl bg-warn-50 px-3 py-2 text-sm text-warn">
-                <AlertIcon className="mt-0.5 h-4 w-4 shrink-0" />
-                Your GPS signal is weak. Move to an open area. If you&rsquo;re already at the gate, tap
-                &ldquo;I&rsquo;m at the gate&rdquo;.
-              </p>
-            )}
-            {near && !weak && (
-              <p className="rounded-xl bg-verified-50 px-3 py-2 text-sm text-verified">
-                Almost there &mdash; look for the {entrance.gateName}.
-              </p>
-            )}
-
-            {nav.routeLoading && <p className="text-sm text-ink-400">Loading route&hellip;</p>}
-            {nav.routeProblem && !nav.routeLoading && (
+            {/* Collapsed: just the distance (and any problem), so the map stays in view. */}
+            {collapsed && nav.distanceM !== null && (
               <p className="text-sm text-ink-400">
-                {nav.routeProblem === 'offline'
-                  ? 'No internet, so we can\u2019t draw the route.'
-                  : 'We couldn\u2019t load the route.'}{' '}
-                Follow the distance above, or open your maps app below.
+                <span className="font-display text-xl font-bold text-ink">{formatDistance(nav.distanceM)}</span> from
+                the gate{nav.route ? ` \u00b7 ${formatDuration(nav.route.durationS)}` : ''}
               </p>
             )}
+            {collapsed && nav.problem && <ProblemNotice problem={nav.problem} />}
 
-            {nav.route && nav.route.steps.length > 0 && (
-              <details className="rounded-xl border border-ink-100 px-3 py-2 text-sm">
-                <summary className="cursor-pointer font-medium text-ink">Step-by-step directions</summary>
-                <ol className="mt-2 flex list-decimal flex-col gap-1.5 pl-5 text-ink-400">
-                  {nav.route.steps.map((s, i) => (
-                    <li key={i}>
-                      {s.instruction}
-                      {s.distanceM > 0 && <span className="text-ink-600"> ({formatDistance(s.distanceM)})</span>}
-                    </li>
-                  ))}
-                </ol>
-              </details>
-            )}
+            {/* Everything else folds away but stays mounted, so voice and sharing keep working. */}
+            <div hidden={collapsed} className={collapsed ? 'hidden' : 'flex flex-col gap-3'}>
+              {nav.phase === 'locating' && !nav.position && !nav.problem && (
+                <p className="text-sm text-ink-400">Finding your location&hellip;</p>
+              )}
 
-            <div className="flex flex-col gap-2">
-              {nav.phase === 'idle' && (
-                <Button fullWidth onClick={nav.start}>
-                  Try again
-                </Button>
-              )}
-              {nav.phase !== 'idle' && (
-                <Button fullWidth variant="secondary" onClick={nav.confirmArrivedManually}>
-                  I&rsquo;m at the gate
-                </Button>
-              )}
-              {hasMapToken && nav.position && !following && (
-                <Button fullWidth variant="secondary" onClick={() => setFollowing(true)}>
-                  Recentre on me
-                </Button>
-              )}
-              {nav.phase !== 'idle' && (
-                <Button variant="ghost" fullWidth onClick={nav.refreshRoute} disabled={!nav.position || nav.routeLoading}>
-                  Refresh route
-                </Button>
-              )}
-            </div>
+              {nav.problem && <ProblemNotice problem={nav.problem} />}
 
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-              <span className="text-ink-400">Open in:</span>
-              <a href={externalDirectionsUrl(gateCoords)} target="_blank" rel="noopener noreferrer" className="text-brass underline">
-                Google Maps
-              </a>
-              <a href={wazeUrl(gateCoords)} target="_blank" rel="noopener noreferrer" className="text-brass underline">
-                Waze
-              </a>
-              <a href={appleMapsUrl(gateCoords)} target="_blank" rel="noopener noreferrer" className="text-brass underline">
-                Apple Maps
-              </a>
+              {!nav.online && (
+                <p className="flex items-center gap-2 rounded-xl bg-warn-50 px-3 py-2 text-sm text-warn">
+                  <WifiOffIcon className="h-4 w-4 shrink-0" />
+                  You&rsquo;re offline, so the map and route may not load. Your distance still updates.
+                </p>
+              )}
+
+              {nav.distanceM !== null && (
+                <div>
+                  <p className="font-display text-3xl font-bold text-ink">{formatDistance(nav.distanceM)}</p>
+                  <p className="text-sm text-ink-400">
+                    from the gate (straight line)
+                    {nav.route
+                      ? ` \u00b7 ${formatDistance(nav.route.distanceM)} by road \u00b7 ${formatDuration(nav.route.durationS)}`
+                      : ''}
+                  </p>
+                </div>
+              )}
+
+              {weak && (
+                <p className="flex items-start gap-2 rounded-xl bg-warn-50 px-3 py-2 text-sm text-warn">
+                  <AlertIcon className="mt-0.5 h-4 w-4 shrink-0" />
+                  Your GPS signal is weak. Move to an open area. If you&rsquo;re already at the gate, tap
+                  &ldquo;I&rsquo;m at the gate&rdquo;.
+                </p>
+              )}
+              {near && !weak && (
+                <p className="rounded-xl bg-verified-50 px-3 py-2 text-sm text-verified">
+                  Almost there &mdash; look for the {entrance.gateName}.
+                </p>
+              )}
+
+              {nav.routeLoading && <p className="text-sm text-ink-400">Loading route&hellip;</p>}
+              {nav.routeProblem && !nav.routeLoading && (
+                <p className="text-sm text-ink-400">
+                  {nav.routeProblem === 'offline'
+                    ? 'No internet, so we can\u2019t draw the route.'
+                    : 'We couldn\u2019t load the route.'}{' '}
+                  Follow the distance above, or open your maps app below.
+                </p>
+              )}
+
+              {nav.route && nav.route.steps.length > 0 && (
+                <details className="rounded-xl border border-ink-100 px-3 py-2 text-sm">
+                  <summary className="cursor-pointer font-medium text-ink">Step-by-step directions</summary>
+                  <ol className="mt-2 flex list-decimal flex-col gap-1.5 pl-5 text-ink-400">
+                    {nav.route.steps.map((s, i) => (
+                      <li key={i}>
+                        {s.instruction}
+                        {s.distanceM > 0 && <span className="text-ink-600"> ({formatDistance(s.distanceM)})</span>}
+                      </li>
+                    ))}
+                  </ol>
+                </details>
+              )}
+
+              <div className="flex flex-col gap-2">
+                {nav.phase === 'idle' && (
+                  <Button fullWidth onClick={nav.start}>
+                    Try again
+                  </Button>
+                )}
+                {nav.phase !== 'idle' && (
+                  <Button fullWidth variant="secondary" onClick={nav.confirmArrivedManually}>
+                    I&rsquo;m at the gate
+                  </Button>
+                )}
+                {hasMapToken && nav.position && !following && (
+                  <Button fullWidth variant="secondary" onClick={() => setFollowing(true)}>
+                    Recentre on me
+                  </Button>
+                )}
+                {nav.phase !== 'idle' && (
+                  <Button variant="ghost" fullWidth onClick={nav.refreshRoute} disabled={!nav.position || nav.routeLoading}>
+                    Refresh route
+                  </Button>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                <span className="text-ink-400">Open in:</span>
+                <a href={externalDirectionsUrl(gateCoords)} target="_blank" rel="noopener noreferrer" className="text-brass underline">
+                  Google Maps
+                </a>
+                <a href={wazeUrl(gateCoords)} target="_blank" rel="noopener noreferrer" className="text-brass underline">
+                  Waze
+                </a>
+                <a href={appleMapsUrl(gateCoords)} target="_blank" rel="noopener noreferrer" className="text-brass underline">
+                  Apple Maps
+                </a>
+              </div>
             </div>
           </>
         )}
 
-        {/* Always mounted, in every phase: they react to arrival (announce it / tell the host). */}
-        <VoiceGuidance
-          destination={{ lng: entrance.longitude, lat: entrance.latitude }}
-          gateName={entrance.gateName}
-          position={nav.position}
-          navPhase={nav.phase}
-          onStart={nav.start}
-        />
-        <ShareLiveLocation token={token} position={nav.position} navPhase={nav.phase} onStart={nav.start} />
+        {/* Always mounted, in every phase (even collapsed): they react to arrival and keep speaking / sharing. */}
+        <div hidden={collapsed} className={collapsed ? 'hidden' : 'flex flex-col'}>
+          <VoiceGuidance
+            destination={{ lng: entrance.longitude, lat: entrance.latitude }}
+            gateName={entrance.gateName}
+            position={nav.position}
+            navPhase={nav.phase}
+            onStart={nav.start}
+          />
+          <ShareLiveLocation token={token} position={nav.position} navPhase={nav.phase} onStart={nav.start} />
+        </div>
       </section>
     </>
   );
