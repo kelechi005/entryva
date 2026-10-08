@@ -659,3 +659,85 @@ enum VisitorType {
   GUEST
   COURIER
 }
+
+// ---------------------------------------------------------------------------
+// Push notifications, estate announcements, emergency alerts
+// (CLAUDE.md 7.2). Like `Notification`, these hold plain ids instead of
+// relations: they are append-mostly operational records, and keeping them
+// off the User/Estate models means adding them never touches those tables.
+// ---------------------------------------------------------------------------
+
+enum AnnouncementKind {
+  ANNOUNCEMENT
+  SECURITY_ALERT
+}
+
+enum EmergencyKind {
+  FIRE
+  MEDICAL
+  SECURITY
+  OTHER
+}
+
+enum EmergencyStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+// One row per browser/phone that agreed to receive push messages. The
+// endpoint is the push service's private address for that device, so it is
+// unique, and a device that signs in as someone else simply moves to them.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Estate-wide notices written by the admin, and urgent security alerts
+// that the admin or a security officer can send to everyone in the estate.
+// The author's name is copied in so the notice still reads correctly if
+// that account is later renamed or removed.
+model Announcement {
+  id         String           @id @default(cuid())
+  estateId   String
+  authorId   String
+  authorName String
+  kind       AnnouncementKind
+  title      String
+  body       String
+  createdAt  DateTime         @default(now())
+
+  @@index([estateId, createdAt])
+  @@index([estateId, kind, createdAt])
+}
+
+// A resident pressing the emergency button. Security officers (and the
+// admin) are told; an officer acknowledges and later resolves it. Names
+// and the apartment label are copied in so the record stays readable.
+model EmergencyAlert {
+  id                 String          @id @default(cuid())
+  estateId           String
+  raisedById         String
+  raisedByName       String
+  apartmentLabel     String
+  kind               EmergencyKind
+  note               String?
+  status             EmergencyStatus @default(OPEN)
+  acknowledgedById   String?
+  acknowledgedByName String?
+  acknowledgedAt     DateTime?
+  resolvedById       String?
+  resolvedByName     String?
+  resolvedAt         DateTime?
+  createdAt          DateTime        @default(now())
+
+  @@index([estateId, status, createdAt])
+  @@index([raisedById, createdAt])
+}

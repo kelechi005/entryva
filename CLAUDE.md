@@ -300,6 +300,64 @@ it).
 
 ---
 
+## 7.2 Estate Announcements, Emergency/Security Alerts, Push Notifications, Arrival Alerts (added 2026-10-06, owner request)
+
+§13 listed emergency alerts and estate announcements as future features.
+The owner has now asked for them, together with phone (web push)
+notifications and visitor-arrival alerts. This section is that explicit
+decision. SMS / WhatsApp / email delivery is STILL not built.
+
+**Backend:** `modules/alerts` (announcements, emergencies, arrival alerts),
+`modules/push` (Web Push), and `NotificationsService` (`dispatch` for one
+person, `dispatchMany` for a group; both save the in-app bell entry first and
+then push on a best-effort basis). Tables: `PushSubscription`,
+`Announcement`, `EmergencyAlert` (migration `..._alerts_push_announcements`).
+**Frontend:** the shared `/alerts` page (notices + emergencies; every push
+notification opens it), `AlertsBar` in each role layout (turn-on-push
+reminder, plus the red emergency bar for security/admin), a `SosLink` for
+residents, and `frontend/worker/index.js` (the service-worker code that shows
+a push and handles the tap; it MUST live in `frontend/worker/`, that is where
+the PWA tool looks).
+
+Who can do what (enforced server-side, one estate only, §11):
+- **Announcements:** admin posts notices AND security alerts and can delete;
+  security officers post security alerts only; residents read only.
+- **Emergencies:** only a resident raises one (button -> choose kind ->
+  confirm; throttled; the same kind pressed again within minutes does not
+  send a second alarm; the resident is told if nobody could be notified).
+  Security officers and the admin are told, can acknowledge and resolve, and
+  see the resident's name, apartment and phone. This is a deliberate,
+  narrow exception to §6.5 ("no resident directory"): in an emergency
+  responders need to know who and where. It is never shown outside an alert.
+  A resident can only ever see and close their own alerts.
+- **Arrival alerts:** only the resident who invited the visitor is told, and
+  only when the visitor chose "Share my live location" and their own phone
+  confirmed they reached the gate. It says THAT they arrived, never where
+  they are. Security officers and admins are not sent arrival alerts (§6.1).
+- Nothing here gives the admin access to visitor identity, contacts,
+  invitations or entry history (§6, §14). Announcement/emergency text is
+  only what the author typed.
+
+Push design:
+- Web Push (VAPID), not a WebSocket (§4). Off unless `VAPID_PUBLIC_KEY`,
+  `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` (a `mailto:` address) are set in
+  the backend environment; the bell and the `/alerts` page work without it.
+- A device registers its own push address. The server only calls the real
+  browser push services (`push-endpoint.ts` allow-list), so a user cannot make
+  the server call an internal address (SSRF).
+- A phone that signs in as a different person moves to that person the next
+  time the app opens; "Turn off on this device" removes it immediately.
+- Lock-screen text is short. Emergencies are urgent (stay on screen); notices
+  are not.
+- While a screen is open, emergencies are re-checked every ~15-20 s and only
+  while the page is visible. Push is what wakes a closed app.
+
+Not built (new decisions if wanted): SMS/WhatsApp/email, per-person
+category opt-outs, read receipts for announcements, sending a location with
+an emergency, editing a posted notice.
+
+---
+
 ## 8. No In-App Calling
 
 An earlier version of this plan specified full WebRTC calling

@@ -86,6 +86,17 @@ export function describeAuditLog(log: AdminAuditLog): Described {
     case 'RESIDENT_INVITE_COMPLETED':
       return { summary: 'A resident finished setting up their account' };
 
+    case 'ANNOUNCEMENT_POSTED':
+      return { summary: 'Posted an estate notice or security alert' };
+    case 'ANNOUNCEMENT_DELETED':
+      return { summary: 'Deleted an estate notice or security alert' };
+    case 'EMERGENCY_RAISED':
+      return { summary: 'A resident raised an emergency alert' };
+    case 'EMERGENCY_ACKNOWLEDGED':
+      return { summary: 'Security responded to an emergency alert' };
+    case 'EMERGENCY_RESOLVED':
+      return { summary: 'An emergency alert was closed' };
+
     case 'ESTATE_SIGNUP_COMPLETED':
       return { summary: 'Estate registered and activated' };
 

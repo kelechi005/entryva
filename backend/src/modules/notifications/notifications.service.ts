@@ -1,5 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { PushService } from '../push/push.service';
+import { buildPushMessage } from '../push/push-message';
 
 /**
  * CLAUDE.md §27: "Support an internal notification abstraction... do not
@@ -16,7 +18,13 @@ export type NotificationType =
   | 'INVITATION_EXTENDED'
   | 'RECURRING_PASS_ENTERED'
   | 'RECURRING_PASS_EXITED'
-  | 'RECURRING_PASS_OVERDUE';
+  | 'RECURRING_PASS_OVERDUE'
+  | 'VISITOR_ARRIVED'
+  | 'ANNOUNCEMENT_POSTED'
+  | 'SECURITY_ALERT'
+  | 'EMERGENCY_RAISED'
+  | 'EMERGENCY_ACKNOWLEDGED'
+  | 'EMERGENCY_RESOLVED';
 
 export interface DispatchNotificationInput {
   userId: string;
@@ -32,17 +40,20 @@ export interface DispatchNotificationInput {
  *      backs the resident-facing notification list/bell today), and
  *   2. handing the event to whatever provider(s) are configured (§ below).
  *
- * V1 has no web push / SMS / WhatsApp / email provider wired up — see
- * `deliver()`. That means notifications are currently in-app/poll-based
- * only, which CLAUDE.md §27 explicitly allows ("V1 can prioritize web
- * push/in-app notifications"). Swapping in a real provider later is a
- * change to `deliver()` alone; no caller of `dispatch()` needs to change.
+ * Delivery is in-app (the bell, always) plus Web Push to the person's
+ * phones/browsers when push is switched on (`PushService`; off without the
+ * VAPID keys, in which case the bell works exactly as before). SMS /
+ * WhatsApp / email are still not wired. Adding one later is a change to
+ * `deliver()` alone; no caller of `dispatch()` needs to change.
  */
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly push: PushService,
+  ) {}
 
   async dispatch(input: DispatchNotificationInput): Promise<void> {
     try {
@@ -66,20 +77,43 @@ export class NotificationsService {
   }
 
   /**
-   * Provider dispatch point. No push/SMS/WhatsApp/email provider is
-   * configured in this scaffold, so this is a deliberate no-op beyond a
-   * debug log — the in-app `Notification` row created in `dispatch()`
-   * above is the real, functioning delivery mechanism for V1. Adding a
-   * provider (e.g. web push) later means implementing this method; it
-   * does not touch any call site.
+   * Tell many people at once (announcements, emergencies): one saved bell
+   * entry each, and a single push fan-out. Same never-throws rule as
+   * `dispatch()`.
+   */
+  async dispatchMany(
+    userIds: string[],
+    type: NotificationType,
+    payload?: Record<string, unknown>,
+  ): Promise<void> {
+    const recipients = [...new Set(userIds)];
+    if (recipients.length === 0) return;
+    try {
+      await this.prisma.notification.createMany({
+        data: recipients.map((userId) => ({ userId, type, payload: (payload ?? undefined) as any })),
+      });
+      // Not awaited: a slow push service must never hold up the request
+      // (an emergency being raised, a post being published).
+      void this.push.sendToUsers(recipients, buildPushMessage(type, payload)).catch(() => undefined);
+    } catch (err) {
+      this.logger.error(`Failed to dispatch notification "${type}" to ${recipients.length} users`, err as Error);
+    }
+  }
+
+  /**
+   * Phone/browser delivery. Fire-and-forget on purpose: Web Push talks to
+   * outside servers that can be slow, and a gate scan must never wait on
+   * them. `PushService` swallows its own errors; the .catch is a belt and
+   * braces for anything unexpected.
    */
   private async deliver(
     notificationId: string,
     input: DispatchNotificationInput,
   ): Promise<void> {
-    this.logger.debug(
-      `[stub] would push-deliver notification ${notificationId} (${input.type}) to user ${input.userId}`,
-    );
+    void notificationId;
+    void this.push
+      .sendToUser(input.userId, buildPushMessage(input.type, input.payload))
+      .catch(() => undefined);
   }
 
   /** Resident/officer-facing in-app list — most recent first. */

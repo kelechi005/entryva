@@ -14,12 +14,14 @@ import { usePathname } from 'next/navigation';
 import { LogoutButton } from '@/components/ui/LogoutButton';
 import { CallProvider } from '@/lib/calls/CallProvider';
 import { CallOverlay } from '@/components/security/CallOverlay';
-import { ShieldIcon, ClockIcon, PhoneIcon } from '@/components/ui/icons';
+import { ShieldIcon, ClockIcon, PhoneIcon, BellIcon } from '@/components/ui/icons';
+import { AlertsBar } from '@/components/alerts/AlertsBar';
 import { CallUnreadBadge } from '@/components/security/CallUnreadBadge';
 
 const NAV_ITEMS = [
   { href: '/gate', label: 'Gate', icon: ShieldIcon },
   { href: '/history', label: 'History', icon: ClockIcon },
+  { href: '/alerts', label: 'Alerts', icon: BellIcon },
 ];
 
 // Call is mobile-only (see /call/page.tsx for why), so it's a separate
@@ -81,7 +83,10 @@ export default function SecurityLayout({ children }: { children: React.ReactNode
         </header>
 
         <div className="lg:pl-64">
-          <div className="pb-28 lg:pb-10">{children}</div>
+          <div className="pb-28 lg:pb-10">
+            <AlertsBar role="staff" inset />
+            {children}
+          </div>
         </div>
 
         {/* Mobile floating glass dock */}

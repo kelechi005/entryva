@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNotifications } from '@/hooks/useNotifications';
 import { formatRelativeTime } from '@/lib/format';
+import { alertNotificationCopy } from '@/lib/alerts';
 import { BellIcon } from '@/components/ui/icons';
 import type { AppNotification, NotificationType } from '@/types/notification';
 
@@ -29,7 +30,9 @@ const NOTIFICATION_COPY: Record<NotificationType, (payload: Record<string, unkno
 
 export function describe(notification: AppNotification): string {
   const describer = NOTIFICATION_COPY[notification.type];
-  return describer ? describer(notification.payload) : notification.type;
+  if (describer) return describer(notification.payload);
+  // Estate notices, security alerts, emergencies and arrival alerts.
+  return alertNotificationCopy(notification.type, notification.payload) ?? notification.type;
 }
 
 export function NotificationBell() {

@@ -10,6 +10,7 @@ import { UpdateEstateLocationDto } from './dto/update-estate-location.dto';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { LivePositionDto } from '../live-location/live-position.dto';
 import { markLiveArrived, saveLivePosition, stopLiveSharing } from '../live-location/live-location';
+import { ArrivalAlertsService } from '../alerts/arrival-alerts.service';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ESTATE_ADMIN', 'SUPER_ADMIN')
@@ -39,6 +40,7 @@ export class PublicEstateLocationController {
   constructor(
     private readonly service: EstateLocationService,
     private readonly prisma: PrismaService,
+    private readonly arrivals: ArrivalAlertsService,
   ) {}
 
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
@@ -63,7 +65,10 @@ export class PublicEstateLocationController {
 
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Post(':token/live-location/arrived')
-  liveArrived(@Param('token') token: string) {
-    return markLiveArrived(this.prisma, token);
+  async liveArrived(@Param('token') token: string) {
+    const result = await markLiveArrived(this.prisma, token);
+    // Tell the resident who invited them (best effort, never fails this request).
+    await this.arrivals.notifyHostOfArrival(token);
+    return result;
   }
 }

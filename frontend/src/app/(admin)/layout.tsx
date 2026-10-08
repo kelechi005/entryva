@@ -10,6 +10,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { LogoutButton } from '@/components/ui/LogoutButton';
+import { BellIcon } from '@/components/ui/icons';
+import { AlertsBar } from '@/components/alerts/AlertsBar';
 import {
   HomeIcon,
   BuildingIcon,
@@ -26,6 +28,7 @@ const NAV_ITEMS = [
   { href: '/residents', label: 'Residents', icon: UserIcon },
   { href: '/security-officers', label: 'Security Officers', icon: ShieldIcon },
   { href: '/estate/pass-rules', label: 'Pass Rules', icon: ClockIcon },
+  { href: '/alerts', label: 'Announcements & Alerts', icon: BellIcon },
   { href: '/audit-logs', label: 'Audit Logs', icon: ClockIcon },
 ];
 
@@ -165,7 +168,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
 
       <main className="flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">{children}</div>
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+          <AlertsBar role="staff" />
+          {children}
+        </div>
       </main>
     </div>
   );

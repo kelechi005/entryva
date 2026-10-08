@@ -24,6 +24,7 @@ import { SignupModule } from './modules/signup/signup.module';
 import { InvitationExtensionsModule } from './modules/invitation-extensions/invitation-extensions.module';
 import { RecurringPassesModule } from './modules/recurring-passes/recurring-passes.module';
 import { InvitationExpiryModule } from './modules/invitation-expiry/invitation-expiry.module';
+import { AlertsModule } from './modules/alerts/alerts.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { InvitationExpiryModule } from './modules/invitation-expiry/invitation-e
     InvitationExtensionsModule,
     RecurringPassesModule,
     InvitationExpiryModule,
+    AlertsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

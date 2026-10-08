@@ -12,6 +12,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { AlertsBar } from '@/components/alerts/AlertsBar';
+import { SosLink } from '@/components/alerts/SosLink';
 import { ProfileMenu } from '@/components/ui/ProfileMenu';
 import { HomeIcon, VisitorsIcon, PlusIcon, CalendarIcon } from '@/components/ui/icons';
 
@@ -62,6 +64,7 @@ export default function ResidentLayout({ children }: { children: React.ReactNode
         </nav>
 
         <div className="mt-auto flex flex-col gap-3 border-t border-ink-100 pt-4">
+          <SosLink />
           <div className="flex items-center justify-between px-2">
             <span className="text-xs font-medium text-ink-400">Alerts</span>
             <NotificationBell />
@@ -79,13 +82,17 @@ export default function ResidentLayout({ children }: { children: React.ReactNode
           <img src="/brand/entryva-logo-full.png" alt="Entryva" className="h-4 w-auto" />
         </span>
         <div className="flex items-center gap-1">
+          <SosLink compact />
           <NotificationBell />
           <ProfileMenu subtitle="Resident" compact />
         </div>
       </header>
 
       <div className="lg:pl-64">
-        <div className="pb-[calc(9.5rem+env(safe-area-inset-bottom))] lg:pb-10">{children}</div>
+        <div className="pb-[calc(9.5rem+env(safe-area-inset-bottom))] lg:pb-10">
+          <AlertsBar role="resident" inset />
+          {children}
+        </div>
       </div>
 
       {/* Mobile floating glass dock */}
